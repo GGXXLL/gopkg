@@ -21,7 +21,7 @@ import (
 
 func TestSyncXPool(t *testing.T) {
 	var pool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 	}
@@ -43,7 +43,7 @@ func TestSyncXPool(t *testing.T) {
 
 func TestRaceSyncXPool(t *testing.T) {
 	var pool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 	}
@@ -71,7 +71,7 @@ var p = 1024
 
 func BenchmarkSyncPool(b *testing.B) {
 	var pool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 	}
@@ -93,7 +93,7 @@ func BenchmarkSyncPool(b *testing.B) {
 
 func BenchmarkSyncXPool(b *testing.B) {
 	var pool = Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 		NoGC: true,
@@ -116,7 +116,7 @@ func BenchmarkSyncXPool(b *testing.B) {
 
 func BenchmarkSyncPoolParallel(b *testing.B) {
 	var pool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 	}
@@ -140,7 +140,7 @@ func BenchmarkSyncPoolParallel(b *testing.B) {
 
 func BenchmarkSyncXPoolParallel(b *testing.B) {
 	var pool = Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 		NoGC: true,
@@ -165,7 +165,7 @@ func BenchmarkSyncXPoolParallel(b *testing.B) {
 
 func BenchmarkSyncPoolParallel1(b *testing.B) {
 	var pool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 	}
@@ -185,7 +185,7 @@ func BenchmarkSyncPoolParallel1(b *testing.B) {
 
 func BenchmarkSyncXPoolParallel1(b *testing.B) {
 	var pool = Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]byte, 1024)
 		},
 		NoGC: true,

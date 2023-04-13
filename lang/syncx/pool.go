@@ -38,7 +38,7 @@ type Pool struct {
 	// New optionally specifies a function to generate
 	// a value when Get would otherwise return nil.
 	// It may not be changed concurrently with calls to Get.
-	New func() interface{}
+	New func() any
 	// NoGC any objects in this Pool.
 	NoGC bool
 }
@@ -56,7 +56,7 @@ func (*noCopy) Unlock() {}
 
 const blockSize = 256
 
-type block [blockSize]interface{}
+type block [blockSize]any
 
 const shared = 0
 const unused = 1
@@ -78,7 +78,7 @@ type poolLocal struct {
 }
 
 // Put adds x to the pool.
-func (p *Pool) Put(x interface{}) {
+func (p *Pool) Put(x any) {
 	if x == nil {
 		return
 	}
@@ -110,7 +110,7 @@ func (p *Pool) Put(x interface{}) {
 //
 // If Get would otherwise return nil and p.New is non-nil, Get returns
 // the result of calling p.New.
-func (p *Pool) Get() (x interface{}) {
+func (p *Pool) Get() (x any) {
 	l, pid := p.pin()
 	if l.pidx > 0 {
 		l.pidx--

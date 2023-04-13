@@ -26,7 +26,7 @@ import (
 )
 
 func TestSkipMap(t *testing.T) {
-	m := NewInt()
+	m := New[int]()
 
 	// Correctness.
 	m.Store(123, "123")
@@ -83,7 +83,7 @@ func TestSkipMap(t *testing.T) {
 		t.Fatal("invalid")
 	}
 
-	m.Range(func(key int, _ interface{}) bool {
+	m.Range(func(key int, _ any) bool {
 		if key == 123 {
 			m.Store(123, 123)
 		} else if key == 456 {
@@ -117,7 +117,7 @@ func TestSkipMap(t *testing.T) {
 	wg.Add(1)
 	var count int64
 	go func() {
-		m.Range(func(_ int, _ interface{}) bool {
+		m.Range(func(_ int, _ any) bool {
 			atomic.AddInt64(&count, 1)
 			return true
 		})
@@ -140,8 +140,8 @@ func TestSkipMap(t *testing.T) {
 	}
 	// Correctness 2.
 	var m1 sync.Map
-	m2 := NewUint32()
-	var v1, v2 interface{}
+	m2 := New[uint32]()
+	var v1, v2 any
 	var ok1, ok2 bool
 	for i := 0; i < 100000; i++ {
 		rd := fastrand.Uint32n(10)
@@ -165,7 +165,7 @@ func TestSkipMap(t *testing.T) {
 			m1.Delete(r1)
 			m2.Delete(r1)
 		} else if rd == 4 {
-			m2.Range(func(key uint32, value interface{}) bool {
+			m2.Range(func(key uint32, value any) bool {
 				v, ok := m1.Load(key)
 				if !ok || v != value {
 					t.Fatal(v, ok, key, value)
@@ -183,8 +183,8 @@ func TestSkipMap(t *testing.T) {
 	// Correntness 3. (LoadOrStore)
 	// Only one LoadorStore can successfully insert its key and value.
 	// And the returned value is unique.
-	mp := NewInt()
-	tmpmap := NewInt64()
+	mp := New[int]()
+	tmpmap := New[int64]()
 	samekey := 123
 	var added int64
 	for i := 1; i < 1000; i++ {
@@ -208,8 +208,8 @@ func TestSkipMap(t *testing.T) {
 	}
 	// Correntness 4. (LoadAndDelete)
 	// Only one LoadAndDelete can successfully get a value.
-	mp = NewInt()
-	tmpmap = NewInt64()
+	mp = New[int]()
+	tmpmap = New[int64]()
 	samekey = 123
 	added = 0 // int64
 	mp.Store(samekey, 555)
@@ -232,12 +232,12 @@ func TestSkipMap(t *testing.T) {
 	}
 
 	// Correntness 5. (LoadOrStoreLazy)
-	mp = NewInt()
-	tmpmap = NewInt64()
+	mp = New[int]()
+	tmpmap = New[int64]()
 	samekey = 123
 	added = 0
 	var fcalled int64
-	valuef := func() interface{} {
+	valuef := func() any {
 		atomic.AddInt64(&fcalled, 1)
 		return fastrand.Int63()
 	}
@@ -261,27 +261,11 @@ func TestSkipMap(t *testing.T) {
 	}
 }
 
-func TestSkipMapDesc(t *testing.T) {
-	m := NewIntDesc()
-	cases := []int{10, 11, 12}
-	for _, v := range cases {
-		m.Store(v, nil)
-	}
-	i := len(cases) - 1
-	m.Range(func(key int, _ interface{}) bool {
-		if key != cases[i] {
-			t.Fail()
-		}
-		i--
-		return true
-	})
-}
-
 /* Test from sync.Map */
 func TestConcurrentRange(t *testing.T) {
 	const mapSize = 1 << 10
 
-	m := NewInt64()
+	m := New[int64]()
 	for n := int64(1); n <= mapSize; n++ {
 		m.Store(n, int64(n))
 	}
@@ -321,7 +305,7 @@ func TestConcurrentRange(t *testing.T) {
 	for n := iters; n > 0; n-- {
 		seen := make(map[int64]bool, mapSize)
 
-		m.Range(func(ki int64, vi interface{}) bool {
+		m.Range(func(ki int64, vi any) bool {
 			k, v := ki, vi.(int64)
 			if v%k != 0 {
 				t.Fatalf("while Storing multiples of %v, Range saw value %v", k, v)

@@ -21,29 +21,29 @@ import (
 
 // Logger is a logger interface that provides logging function with levels.
 type Logger interface {
-	Trace(v ...interface{})
-	Debug(v ...interface{})
-	Info(v ...interface{})
-	Notice(v ...interface{})
-	Warn(v ...interface{})
-	Error(v ...interface{})
-	Fatal(v ...interface{})
+	Trace(v ...any)
+	Debug(v ...any)
+	Info(v ...any)
+	Notice(v ...any)
+	Warn(v ...any)
+	Error(v ...any)
+	Fatal(v ...any)
 
-	Tracef(format string, v ...interface{})
-	Debugf(format string, v ...interface{})
-	Infof(format string, v ...interface{})
-	Noticef(format string, v ...interface{})
-	Warnf(format string, v ...interface{})
-	Errorf(format string, v ...interface{})
-	Fatalf(format string, v ...interface{})
+	Tracef(format string, v ...any)
+	Debugf(format string, v ...any)
+	Infof(format string, v ...any)
+	Noticef(format string, v ...any)
+	Warnf(format string, v ...any)
+	Errorf(format string, v ...any)
+	Fatalf(format string, v ...any)
 
-	CtxTracef(ctx context.Context, format string, v ...interface{})
-	CtxDebugf(ctx context.Context, format string, v ...interface{})
-	CtxInfof(ctx context.Context, format string, v ...interface{})
-	CtxNoticef(ctx context.Context, format string, v ...interface{})
-	CtxWarnf(ctx context.Context, format string, v ...interface{})
-	CtxErrorf(ctx context.Context, format string, v ...interface{})
-	CtxFatalf(ctx context.Context, format string, v ...interface{})
+	CtxTracef(ctx context.Context, format string, v ...any)
+	CtxDebugf(ctx context.Context, format string, v ...any)
+	CtxInfof(ctx context.Context, format string, v ...any)
+	CtxNoticef(ctx context.Context, format string, v ...any)
+	CtxWarnf(ctx context.Context, format string, v ...any)
+	CtxErrorf(ctx context.Context, format string, v ...any)
+	CtxFatalf(ctx context.Context, format string, v ...any)
 }
 
 // Level defines the priority of a log message.
@@ -72,12 +72,12 @@ func SetLevel(lv Level) {
 }
 
 // Fatal calls the default logger's Fatal method and then os.Exit(1).
-func Fatal(v ...interface{}) {
+func Fatal(v ...any) {
 	defaultLogger.Fatal(v)
 }
 
 // Error calls the default logger's Error method.
-func Error(v ...interface{}) {
+func Error(v ...any) {
 	if level > LevelError {
 		return
 	}
@@ -85,7 +85,7 @@ func Error(v ...interface{}) {
 }
 
 // Warn calls the default logger's Warn method.
-func Warn(v ...interface{}) {
+func Warn(v ...any) {
 	if level > LevelWarn {
 		return
 	}
@@ -93,7 +93,7 @@ func Warn(v ...interface{}) {
 }
 
 // Notice calls the default logger's Notice method.
-func Notice(v ...interface{}) {
+func Notice(v ...any) {
 	if level > LevelNotice {
 		return
 	}
@@ -101,7 +101,7 @@ func Notice(v ...interface{}) {
 }
 
 // Info calls the default logger's Info method.
-func Info(v ...interface{}) {
+func Info(v ...any) {
 	if level > LevelInfo {
 		return
 	}
@@ -109,7 +109,7 @@ func Info(v ...interface{}) {
 }
 
 // Debug calls the default logger's Debug method.
-func Debug(v ...interface{}) {
+func Debug(v ...any) {
 	if level > LevelDebug {
 		return
 	}
@@ -117,7 +117,7 @@ func Debug(v ...interface{}) {
 }
 
 // Trace calls the default logger's Trace method.
-func Trace(v ...interface{}) {
+func Trace(v ...any) {
 	if level > LevelTrace {
 		return
 	}
@@ -125,12 +125,12 @@ func Trace(v ...interface{}) {
 }
 
 // Fatalf calls the default logger's Fatalf method and then os.Exit(1).
-func Fatalf(format string, v ...interface{}) {
+func Fatalf(format string, v ...any) {
 	defaultLogger.Fatalf(format, v...)
 }
 
 // Errorf calls the default logger's Errorf method.
-func Errorf(format string, v ...interface{}) {
+func Errorf(format string, v ...any) {
 	if level > LevelError {
 		return
 	}
@@ -138,7 +138,7 @@ func Errorf(format string, v ...interface{}) {
 }
 
 // Warnf calls the default logger's Warnf method.
-func Warnf(format string, v ...interface{}) {
+func Warnf(format string, v ...any) {
 	if level > LevelWarn {
 		return
 	}
@@ -146,7 +146,7 @@ func Warnf(format string, v ...interface{}) {
 }
 
 // Noticef calls the default logger's Noticef method.
-func Noticef(format string, v ...interface{}) {
+func Noticef(format string, v ...any) {
 	if level > LevelNotice {
 		return
 	}
@@ -154,7 +154,7 @@ func Noticef(format string, v ...interface{}) {
 }
 
 // Infof calls the default logger's Infof method.
-func Infof(format string, v ...interface{}) {
+func Infof(format string, v ...any) {
 	if level > LevelInfo {
 		return
 	}
@@ -162,7 +162,7 @@ func Infof(format string, v ...interface{}) {
 }
 
 // Debugf calls the default logger's Debugf method.
-func Debugf(format string, v ...interface{}) {
+func Debugf(format string, v ...any) {
 	if level > LevelDebug {
 		return
 	}
@@ -170,7 +170,7 @@ func Debugf(format string, v ...interface{}) {
 }
 
 // Tracef calls the default logger's Tracef method.
-func Tracef(format string, v ...interface{}) {
+func Tracef(format string, v ...any) {
 	if level > LevelTrace {
 		return
 	}
@@ -178,12 +178,12 @@ func Tracef(format string, v ...interface{}) {
 }
 
 // CtxFatalf calls the default logger's CtxFatalf method and then os.Exit(1).
-func CtxFatalf(ctx context.Context, format string, v ...interface{}) {
+func CtxFatalf(ctx context.Context, format string, v ...any) {
 	defaultLogger.CtxFatalf(ctx, format, v...)
 }
 
 // CtxErrorf calls the default logger's CtxErrorf method.
-func CtxErrorf(ctx context.Context, format string, v ...interface{}) {
+func CtxErrorf(ctx context.Context, format string, v ...any) {
 	if level > LevelError {
 		return
 	}
@@ -191,7 +191,7 @@ func CtxErrorf(ctx context.Context, format string, v ...interface{}) {
 }
 
 // CtxWarnf calls the default logger's CtxWarnf method.
-func CtxWarnf(ctx context.Context, format string, v ...interface{}) {
+func CtxWarnf(ctx context.Context, format string, v ...any) {
 	if level > LevelWarn {
 		return
 	}
@@ -199,7 +199,7 @@ func CtxWarnf(ctx context.Context, format string, v ...interface{}) {
 }
 
 // CtxNoticef calls the default logger's CtxNoticef method.
-func CtxNoticef(ctx context.Context, format string, v ...interface{}) {
+func CtxNoticef(ctx context.Context, format string, v ...any) {
 	if level > LevelNotice {
 		return
 	}
@@ -207,7 +207,7 @@ func CtxNoticef(ctx context.Context, format string, v ...interface{}) {
 }
 
 // CtxInfof calls the default logger's CtxInfof method.
-func CtxInfof(ctx context.Context, format string, v ...interface{}) {
+func CtxInfof(ctx context.Context, format string, v ...any) {
 	if level > LevelInfo {
 		return
 	}
@@ -215,7 +215,7 @@ func CtxInfof(ctx context.Context, format string, v ...interface{}) {
 }
 
 // CtxDebugf calls the default logger's CtxDebugf method.
-func CtxDebugf(ctx context.Context, format string, v ...interface{}) {
+func CtxDebugf(ctx context.Context, format string, v ...any) {
 	if level > LevelDebug {
 		return
 	}
@@ -223,7 +223,7 @@ func CtxDebugf(ctx context.Context, format string, v ...interface{}) {
 }
 
 // CtxTracef calls the default logger's CtxTracef method.
-func CtxTracef(ctx context.Context, format string, v ...interface{}) {
+func CtxTracef(ctx context.Context, format string, v ...any) {
 	if level > LevelTrace {
 		return
 	}

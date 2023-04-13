@@ -20,7 +20,7 @@ import (
 )
 
 func Example() {
-	l := NewInt()
+	l := New[int]()
 
 	for _, v := range []int{10, 12, 15} {
 		l.Add(v)
@@ -41,7 +41,7 @@ func Example() {
 
 func TestIntSet(t *testing.T) {
 	// Correctness.
-	l := NewInt64()
+	l := New[int64]()
 	if l.Len() != 0 {
 		t.Fatal("invalid length")
 	}

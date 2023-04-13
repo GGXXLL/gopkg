@@ -20,7 +20,7 @@ import (
 	"unsafe"
 )
 
-var msqv1pool *sync.Pool = &sync.Pool{New: func() interface{} { return new(msqv1node) }}
+var msqv1pool *sync.Pool = &sync.Pool{New: func() any { return new(msqv1node) }}
 
 type MSQueue struct {
 	head unsafe.Pointer // *msqv1node

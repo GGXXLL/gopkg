@@ -28,7 +28,7 @@ const randN = math.MaxUint32
 
 func BenchmarkAdd(b *testing.B) {
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
@@ -49,7 +49,7 @@ func BenchmarkAdd(b *testing.B) {
 
 func BenchmarkContains100Hits(b *testing.B) {
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize; i++ {
 			l.Add(int64(i))
 		}
@@ -77,7 +77,7 @@ func BenchmarkContains100Hits(b *testing.B) {
 func BenchmarkContains50Hits(b *testing.B) {
 	const rate = 2
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize*rate; i++ {
 			if fastrand.Uint32n(rate) == 0 {
 				l.Add(int64(i))
@@ -108,7 +108,7 @@ func BenchmarkContains50Hits(b *testing.B) {
 
 func BenchmarkContainsNoHits(b *testing.B) {
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		invalid := make([]int64, 0, initsize)
 		for i := 0; i < initsize*2; i++ {
 			if i%2 == 0 {
@@ -145,7 +145,7 @@ func BenchmarkContainsNoHits(b *testing.B) {
 
 func Benchmark50Add50Contains(b *testing.B) {
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
@@ -176,7 +176,7 @@ func Benchmark50Add50Contains(b *testing.B) {
 
 func Benchmark30Add70Contains(b *testing.B) {
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
@@ -207,7 +207,7 @@ func Benchmark30Add70Contains(b *testing.B) {
 
 func Benchmark1Remove9Add90Contains(b *testing.B) {
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize; i++ {
 			l.Add(int64(i))
 		}
@@ -248,7 +248,7 @@ func Benchmark1Remove9Add90Contains(b *testing.B) {
 
 func Benchmark1Range9Remove90Add900Contains(b *testing.B) {
 	b.Run("skipset", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize; i++ {
 			l.Add(int64(i))
 		}
@@ -280,7 +280,7 @@ func Benchmark1Range9Remove90Add900Contains(b *testing.B) {
 			for pb.Next() {
 				u := fastrand.Uint32n(1000)
 				if u == 0 {
-					l.Range(func(key, value interface{}) bool {
+					l.Range(func(key, value any) bool {
 						return true
 					})
 				} else if u > 10 && u < 20 {
@@ -454,7 +454,7 @@ func BenchmarkString1Range9Remove90Add900Contains(b *testing.B) {
 			for pb.Next() {
 				u := fastrand.Uint32n(1000)
 				if u == 0 {
-					l.Range(func(key, value interface{}) bool {
+					l.Range(func(key, value any) bool {
 						return true
 					})
 				} else if u > 10 && u < 20 {

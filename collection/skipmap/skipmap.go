@@ -15,34 +15,33 @@
 // Package skipmap is a high-performance, scalable, concurrent-safe map based on skip-list.
 // In the typical pattern(100000 operations, 90%LOAD 9%STORE 1%DELETE, 8C16T), the skipmap
 // up to 10x faster than the built-in sync.Map.
-//
-//go:generate go run types_gen.go
 package skipmap
 
 import (
+	"github.com/bytedance/gopkg/internal/constraint"
 	"sync"
 	"sync/atomic"
 	"unsafe"
 )
 
-// Int64Map represents a map based on skip list in ascending order.
-type Int64Map struct {
-	header       *int64Node
+// Map represents a map based on skip list in ascending order.
+type Map[K constraint.Number] struct {
+	header       *node[K]
 	length       int64
 	highestLevel int64 // highest level for now
 }
 
-type int64Node struct {
-	key   int64
-	value unsafe.Pointer // *interface{}
-	next  optionalArray  // [level]*int64Node
+type node[K constraint.Number] struct {
+	key   K
+	value unsafe.Pointer // *any
+	next  optionalArray  // [level]*node
 	mu    sync.Mutex
 	flags bitflag
 	level uint32
 }
 
-func newInt64Node(key int64, value interface{}, level int) *int64Node {
-	node := &int64Node{
+func newNode[K constraint.Number](key K, value any, level int) *node[K] {
+	node := &node[K]{
 		key:   key,
 		level: uint32(level),
 	}
@@ -53,43 +52,43 @@ func newInt64Node(key int64, value interface{}, level int) *int64Node {
 	return node
 }
 
-func (n *int64Node) storeVal(value interface{}) {
+func (n *node[K]) storeVal(value any) {
 	atomic.StorePointer(&n.value, unsafe.Pointer(&value))
 }
 
-func (n *int64Node) loadVal() interface{} {
-	return *(*interface{})(atomic.LoadPointer(&n.value))
+func (n *node[K]) loadVal() any {
+	return *(*any)(atomic.LoadPointer(&n.value))
 }
 
-func (n *int64Node) loadNext(i int) *int64Node {
-	return (*int64Node)(n.next.load(i))
+func (n *node[K]) loadNext(i int) *node[K] {
+	return (*node[K])(n.next.load(i))
 }
 
-func (n *int64Node) storeNext(i int, node *int64Node) {
+func (n *node[K]) storeNext(i int, node *node[K]) {
 	n.next.store(i, unsafe.Pointer(node))
 }
 
-func (n *int64Node) atomicLoadNext(i int) *int64Node {
-	return (*int64Node)(n.next.atomicLoad(i))
+func (n *node[K]) atomicLoadNext(i int) *node[K] {
+	return (*node[K])(n.next.atomicLoad(i))
 }
 
-func (n *int64Node) atomicStoreNext(i int, node *int64Node) {
+func (n *node[K]) atomicStoreNext(i int, node *node[K]) {
 	n.next.atomicStore(i, unsafe.Pointer(node))
 }
 
-func (n *int64Node) lessthan(key int64) bool {
+func (n *node[K]) lessthan(key K) bool {
 	return n.key < key
 }
 
-func (n *int64Node) equal(key int64) bool {
+func (n *node[K]) equal(key K) bool {
 	return n.key == key
 }
 
-// NewInt64 return an empty int64 skipmap.
-func NewInt64() *Int64Map {
-	h := newInt64Node(0, "", maxLevel)
+// New return an empty int64 skipmap.
+func New[K constraint.Number]() *Map[K] {
+	h := newNode[K](0, "", maxLevel)
 	h.flags.SetTrue(fullyLinked)
-	return &Int64Map{
+	return &Map[K]{
 		header:       h,
 		highestLevel: defaultHighestLevel,
 	}
@@ -98,7 +97,7 @@ func NewInt64() *Int64Map {
 // findNode takes a key and two maximal-height arrays then searches exactly as in a sequential skipmap.
 // The returned preds and succs always satisfy preds[i] > key >= succs[i].
 // (without fullpath, if find the node will return immediately)
-func (s *Int64Map) findNode(key int64, preds *[maxLevel]*int64Node, succs *[maxLevel]*int64Node) *int64Node {
+func (s *Map[K]) findNode(key K, preds *[maxLevel]*node[K], succs *[maxLevel]*node[K]) *node[K] {
 	x := s.header
 	for i := int(atomic.LoadInt64(&s.highestLevel)) - 1; i >= 0; i-- {
 		succ := x.atomicLoadNext(i)
@@ -119,7 +118,7 @@ func (s *Int64Map) findNode(key int64, preds *[maxLevel]*int64Node, succs *[maxL
 
 // findNodeDelete takes a key and two maximal-height arrays then searches exactly as in a sequential skip-list.
 // The returned preds and succs always satisfy preds[i] > key >= succs[i].
-func (s *Int64Map) findNodeDelete(key int64, preds *[maxLevel]*int64Node, succs *[maxLevel]*int64Node) int {
+func (s *Map[K]) findNodeDelete(key K, preds *[maxLevel]*node[K], succs *[maxLevel]*node[K]) int {
 	// lFound represents the index of the first layer at which it found a node.
 	lFound, x := -1, s.header
 	for i := int(atomic.LoadInt64(&s.highestLevel)) - 1; i >= 0; i-- {
@@ -139,8 +138,8 @@ func (s *Int64Map) findNodeDelete(key int64, preds *[maxLevel]*int64Node, succs 
 	return lFound
 }
 
-func unlockInt64(preds [maxLevel]*int64Node, highestLevel int) {
-	var prevPred *int64Node
+func unlock[K constraint.Number](preds [maxLevel]*node[K], highestLevel int) {
+	var prevPred *node[K]
 	for i := highestLevel; i >= 0; i-- {
 		if preds[i] != prevPred { // the node could be unlocked by previous loop
 			preds[i].mu.Unlock()
@@ -150,9 +149,9 @@ func unlockInt64(preds [maxLevel]*int64Node, highestLevel int) {
 }
 
 // Store sets the value for a key.
-func (s *Int64Map) Store(key int64, value interface{}) {
+func (s *Map[K]) Store(key K, value any) {
 	level := s.randomlevel()
-	var preds, succs [maxLevel]*int64Node
+	var preds, succs [maxLevel]*node[K]
 	for {
 		nodeFound := s.findNode(key, &preds, &succs)
 		if nodeFound != nil { // indicating the key is already in the skip-list
@@ -171,7 +170,7 @@ func (s *Int64Map) Store(key int64, value interface{}) {
 		var (
 			highestLocked        = -1 // the highest level being locked by this process
 			valid                = true
-			pred, succ, prevPred *int64Node
+			pred, succ, prevPred *node[K]
 		)
 		for layer := 0; valid && layer < level; layer++ {
 			pred = preds[layer]   // target node's previous node
@@ -188,23 +187,23 @@ func (s *Int64Map) Store(key int64, value interface{}) {
 			valid = !pred.flags.Get(marked) && (succ == nil || !succ.flags.Get(marked)) && pred.loadNext(layer) == succ
 		}
 		if !valid {
-			unlockInt64(preds, highestLocked)
+			unlock(preds, highestLocked)
 			continue
 		}
 
-		nn := newInt64Node(key, value, level)
+		nn := newNode(key, value, level)
 		for layer := 0; layer < level; layer++ {
 			nn.storeNext(layer, succs[layer])
 			preds[layer].atomicStoreNext(layer, nn)
 		}
 		nn.flags.SetTrue(fullyLinked)
-		unlockInt64(preds, highestLocked)
+		unlock(preds, highestLocked)
 		atomic.AddInt64(&s.length, 1)
 		return
 	}
 }
 
-func (s *Int64Map) randomlevel() int {
+func (s *Map[K]) randomlevel() int {
 	// Generate random level.
 	level := randomLevel()
 	// Update highest level if possible.
@@ -223,7 +222,7 @@ func (s *Int64Map) randomlevel() int {
 // Load returns the value stored in the map for a key, or nil if no
 // value is present.
 // The ok result indicates whether value was found in the map.
-func (s *Int64Map) Load(key int64) (value interface{}, ok bool) {
+func (s *Map[K]) Load(key K) (value any, ok bool) {
 	x := s.header
 	for i := int(atomic.LoadInt64(&s.highestLevel)) - 1; i >= 0; i-- {
 		nex := x.atomicLoadNext(i)
@@ -246,12 +245,12 @@ func (s *Int64Map) Load(key int64) (value interface{}, ok bool) {
 // LoadAndDelete deletes the value for a key, returning the previous value if any.
 // The loaded result reports whether the key was present.
 // (Modified from Delete)
-func (s *Int64Map) LoadAndDelete(key int64) (value interface{}, loaded bool) {
+func (s *Map[K]) LoadAndDelete(key K) (value any, loaded bool) {
 	var (
-		nodeToDelete *int64Node
+		nodeToDelete *node[K]
 		isMarked     bool // represents if this operation mark the node
 		topLayer     = -1
-		preds, succs [maxLevel]*int64Node
+		preds, succs [maxLevel]*node[K]
 	)
 	for {
 		lFound := s.findNodeDelete(key, &preds, &succs)
@@ -274,7 +273,7 @@ func (s *Int64Map) LoadAndDelete(key int64) (value interface{}, loaded bool) {
 			var (
 				highestLocked        = -1 // the highest level being locked by this process
 				valid                = true
-				pred, succ, prevPred *int64Node
+				pred, succ, prevPred *node[K]
 			)
 			for layer := 0; valid && (layer <= topLayer); layer++ {
 				pred, succ = preds[layer], succs[layer]
@@ -291,7 +290,7 @@ func (s *Int64Map) LoadAndDelete(key int64) (value interface{}, loaded bool) {
 				valid = !pred.flags.Get(marked) && pred.loadNext(layer) == succ
 			}
 			if !valid {
-				unlockInt64(preds, highestLocked)
+				unlock(preds, highestLocked)
 				continue
 			}
 			for i := topLayer; i >= 0; i-- {
@@ -300,7 +299,7 @@ func (s *Int64Map) LoadAndDelete(key int64) (value interface{}, loaded bool) {
 				preds[i].atomicStoreNext(i, nodeToDelete.loadNext(i))
 			}
 			nodeToDelete.mu.Unlock()
-			unlockInt64(preds, highestLocked)
+			unlock(preds, highestLocked)
 			atomic.AddInt64(&s.length, -1)
 			return nodeToDelete.loadVal(), true
 		}
@@ -312,10 +311,10 @@ func (s *Int64Map) LoadAndDelete(key int64) (value interface{}, loaded bool) {
 // Otherwise, it stores and returns the given value.
 // The loaded result is true if the value was loaded, false if stored.
 // (Modified from Store)
-func (s *Int64Map) LoadOrStore(key int64, value interface{}) (actual interface{}, loaded bool) {
+func (s *Map[K]) LoadOrStore(key K, value any) (actual any, loaded bool) {
 	var (
 		level        int
-		preds, succs [maxLevel]*int64Node
+		preds, succs [maxLevel]*node[K]
 		hl           = int(atomic.LoadInt64(&s.highestLevel))
 	)
 	for {
@@ -335,7 +334,7 @@ func (s *Int64Map) LoadOrStore(key int64, value interface{}) (actual interface{}
 		var (
 			highestLocked        = -1 // the highest level being locked by this process
 			valid                = true
-			pred, succ, prevPred *int64Node
+			pred, succ, prevPred *node[K]
 		)
 		if level == 0 {
 			level = s.randomlevel()
@@ -362,17 +361,17 @@ func (s *Int64Map) LoadOrStore(key int64, value interface{}) (actual interface{}
 			valid = !pred.flags.Get(marked) && (succ == nil || !succ.flags.Get(marked)) && pred.loadNext(layer) == succ
 		}
 		if !valid {
-			unlockInt64(preds, highestLocked)
+			unlock(preds, highestLocked)
 			continue
 		}
 
-		nn := newInt64Node(key, value, level)
+		nn := newNode(key, value, level)
 		for layer := 0; layer < level; layer++ {
 			nn.storeNext(layer, succs[layer])
 			preds[layer].atomicStoreNext(layer, nn)
 		}
 		nn.flags.SetTrue(fullyLinked)
-		unlockInt64(preds, highestLocked)
+		unlock(preds, highestLocked)
 		atomic.AddInt64(&s.length, 1)
 		return value, false
 	}
@@ -382,10 +381,10 @@ func (s *Int64Map) LoadOrStore(key int64, value interface{}) (actual interface{}
 // Otherwise, it stores and returns the given value from f, f will only be called once.
 // The loaded result is true if the value was loaded, false if stored.
 // (Modified from LoadOrStore)
-func (s *Int64Map) LoadOrStoreLazy(key int64, f func() interface{}) (actual interface{}, loaded bool) {
+func (s *Map[K]) LoadOrStoreLazy(key K, f func() any) (actual any, loaded bool) {
 	var (
 		level        int
-		preds, succs [maxLevel]*int64Node
+		preds, succs [maxLevel]*node[K]
 		hl           = int(atomic.LoadInt64(&s.highestLevel))
 	)
 	for {
@@ -405,7 +404,7 @@ func (s *Int64Map) LoadOrStoreLazy(key int64, f func() interface{}) (actual inte
 		var (
 			highestLocked        = -1 // the highest level being locked by this process
 			valid                = true
-			pred, succ, prevPred *int64Node
+			pred, succ, prevPred *node[K]
 		)
 		if level == 0 {
 			level = s.randomlevel()
@@ -432,29 +431,29 @@ func (s *Int64Map) LoadOrStoreLazy(key int64, f func() interface{}) (actual inte
 			valid = !pred.flags.Get(marked) && pred.loadNext(layer) == succ && (succ == nil || !succ.flags.Get(marked))
 		}
 		if !valid {
-			unlockInt64(preds, highestLocked)
+			unlock(preds, highestLocked)
 			continue
 		}
 		value := f()
-		nn := newInt64Node(key, value, level)
+		nn := newNode(key, value, level)
 		for layer := 0; layer < level; layer++ {
 			nn.storeNext(layer, succs[layer])
 			preds[layer].atomicStoreNext(layer, nn)
 		}
 		nn.flags.SetTrue(fullyLinked)
-		unlockInt64(preds, highestLocked)
+		unlock(preds, highestLocked)
 		atomic.AddInt64(&s.length, 1)
 		return value, false
 	}
 }
 
 // Delete deletes the value for a key.
-func (s *Int64Map) Delete(key int64) bool {
+func (s *Map[K]) Delete(key K) bool {
 	var (
-		nodeToDelete *int64Node
+		nodeToDelete *node[K]
 		isMarked     bool // represents if this operation mark the node
 		topLayer     = -1
-		preds, succs [maxLevel]*int64Node
+		preds, succs [maxLevel]*node[K]
 	)
 	for {
 		lFound := s.findNodeDelete(key, &preds, &succs)
@@ -477,7 +476,7 @@ func (s *Int64Map) Delete(key int64) bool {
 			var (
 				highestLocked        = -1 // the highest level being locked by this process
 				valid                = true
-				pred, succ, prevPred *int64Node
+				pred, succ, prevPred *node[K]
 			)
 			for layer := 0; valid && (layer <= topLayer); layer++ {
 				pred, succ = preds[layer], succs[layer]
@@ -494,7 +493,7 @@ func (s *Int64Map) Delete(key int64) bool {
 				valid = !pred.flags.Get(marked) && pred.atomicLoadNext(layer) == succ
 			}
 			if !valid {
-				unlockInt64(preds, highestLocked)
+				unlock(preds, highestLocked)
 				continue
 			}
 			for i := topLayer; i >= 0; i-- {
@@ -503,7 +502,7 @@ func (s *Int64Map) Delete(key int64) bool {
 				preds[i].atomicStoreNext(i, nodeToDelete.loadNext(i))
 			}
 			nodeToDelete.mu.Unlock()
-			unlockInt64(preds, highestLocked)
+			unlock[K](preds, highestLocked)
 			atomic.AddInt64(&s.length, -1)
 			return true
 		}
@@ -518,7 +517,7 @@ func (s *Int64Map) Delete(key int64) bool {
 // contents: no key will be visited more than once, but if the value for any key
 // is stored or deleted concurrently, Range may reflect any mapping for that key
 // from any point during the Range call.
-func (s *Int64Map) Range(f func(key int64, value interface{}) bool) {
+func (s *Map[K]) Range(f func(key K, value any) bool) {
 	x := s.header.atomicLoadNext(0)
 	for x != nil {
 		if !x.flags.MGet(fullyLinked|marked, fullyLinked) {
@@ -533,6 +532,6 @@ func (s *Int64Map) Range(f func(key int64, value interface{}) bool) {
 }
 
 // Len return the length of this skipmap.
-func (s *Int64Map) Len() int {
+func (s *Map[K]) Len() int {
 	return int(atomic.LoadInt64(&s.length))
 }

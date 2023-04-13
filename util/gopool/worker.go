@@ -33,7 +33,7 @@ type worker struct {
 	pool *pool
 }
 
-func newWorker() interface{} {
+func newWorker() any {
 	return &worker{}
 }
 

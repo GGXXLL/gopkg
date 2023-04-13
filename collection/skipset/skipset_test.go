@@ -27,7 +27,7 @@ import (
 )
 
 func Example() {
-	l := NewInt()
+	l := New[int]()
 
 	for _, v := range []int{10, 12, 15} {
 		if l.Add(v) {
@@ -50,7 +50,7 @@ func Example() {
 
 func TestIntSet(t *testing.T) {
 	// Correctness.
-	l := NewInt()
+	l := New[int]()
 	if l.length != 0 {
 		t.Fatal("invalid length")
 	}
@@ -204,8 +204,8 @@ func TestIntSet(t *testing.T) {
 
 	// Correctness 2.
 	var (
-		x     = NewInt()
-		y     = NewInt()
+		x     = New[int]()
+		y     = New[int]()
 		count = 10000
 	)
 
@@ -233,7 +233,7 @@ func TestIntSet(t *testing.T) {
 	}
 
 	// Concurrent Add and Remove in small zone.
-	x = NewInt()
+	x = New[int]()
 	var (
 		addcount    uint64 = 0
 		removecount uint64 = 0
@@ -270,22 +270,6 @@ func TestIntSet(t *testing.T) {
 			panic("invalid content")
 		}
 		pre = score
-		return true
-	})
-}
-
-func TestIntSetDesc(t *testing.T) {
-	s := NewIntDesc()
-	nums := []int{-1, 0, 5, 12}
-	for _, v := range nums {
-		s.Add(v)
-	}
-	i := len(nums) - 1
-	s.Range(func(value int) bool {
-		if nums[i] != value {
-			t.Fatal("error")
-		}
-		i--
 		return true
 	})
 }

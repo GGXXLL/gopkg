@@ -30,7 +30,7 @@
 ### Example
 ```go
 var pool = &syncx.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &struct{}
 	},
 	NoGC: true,

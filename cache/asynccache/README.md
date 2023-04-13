@@ -10,20 +10,20 @@ type AsyncCache interface {
 	// SetDefault sets the default value of given key if it is new to the cache.
 	// It is useful for cache warming up.
 	// Param val should not be nil.
-	SetDefault(key string, val interface{}) (exist bool)
+	SetDefault(key string, val any) (exist bool)
 
 	// Get tries to fetch a value corresponding to the given key from the cache.
 	// If error occurs during the first time fetching, it will be cached until the
 	// sequential fetching triggered by the refresh goroutine succeed.
-	Get(key string) (val interface{}, err error)
+	Get(key string) (val any, err error)
 
 	// GetOrSet tries to fetch a value corresponding to the given key from the cache.
 	// If the key is not yet cached or error occurs, the default value will be set.
-	GetOrSet(key string, defaultVal interface{}) (val interface{})
+	GetOrSet(key string, defaultVal any) (val any)
 
 	// Dump dumps all cache entries.
 	// This will not cause expire to refresh.
-	Dump() map[string]interface{}
+	Dump() map[string]any
 
 	// DeleteIf deletes cached entries that match the `shouldDelete` predicate.
 	DeleteIf(shouldDelete func(key string) bool)
@@ -40,10 +40,10 @@ type AsyncCache interface {
 var key, ret = "key", "ret"
 opt := Options{
     RefreshDuration: time.Second,
-    IsSame: func(key string, oldData, newData interface{}) bool {
+    IsSame: func(key string, oldData, newData any) bool {
         return false
     },
-    Fetcher: func(key string) (interface{}, error) {
+    Fetcher: func(key string) (any, error) {
         return ret, nil
     },
 }

@@ -18,28 +18,29 @@
 package skipset
 
 import (
+	"github.com/bytedance/gopkg/internal/constraint"
 	"sync"
 	"sync/atomic"
 	"unsafe"
 )
 
-// Int64Set represents a set based on skip list in ascending order.
-type Int64Set struct {
-	header       *int64Node
+// Set represents a set based on skip list in ascending order.
+type Set[K constraint.Number] struct {
+	header       *node[K]
 	length       int64
 	highestLevel int64 // highest level for now
 }
 
-type int64Node struct {
-	value int64
-	next  optionalArray // [level]*int64Node
+type node[K constraint.Number] struct {
+	value K
+	next  optionalArray // [level]*node[K
 	mu    sync.Mutex
 	flags bitflag
 	level uint32
 }
 
-func newInt64Node(value int64, level int) *int64Node {
-	node := &int64Node{
+func newNode[K constraint.Number](value K, level int) *node[K] {
+	node := &node[K]{
 		value: value,
 		level: uint32(level),
 	}
@@ -49,35 +50,35 @@ func newInt64Node(value int64, level int) *int64Node {
 	return node
 }
 
-func (n *int64Node) loadNext(i int) *int64Node {
-	return (*int64Node)(n.next.load(i))
+func (n *node[K]) loadNext(i int) *node[K] {
+	return (*node[K])(n.next.load(i))
 }
 
-func (n *int64Node) storeNext(i int, node *int64Node) {
+func (n *node[K]) storeNext(i int, node *node[K]) {
 	n.next.store(i, unsafe.Pointer(node))
 }
 
-func (n *int64Node) atomicLoadNext(i int) *int64Node {
-	return (*int64Node)(n.next.atomicLoad(i))
+func (n *node[K]) atomicLoadNext(i int) *node[K] {
+	return (*node[K])(n.next.atomicLoad(i))
 }
 
-func (n *int64Node) atomicStoreNext(i int, node *int64Node) {
+func (n *node[K]) atomicStoreNext(i int, node *node[K]) {
 	n.next.atomicStore(i, unsafe.Pointer(node))
 }
 
-func (n *int64Node) lessthan(value int64) bool {
+func (n *node[K]) lessthan(value K) bool {
 	return n.value < value
 }
 
-func (n *int64Node) equal(value int64) bool {
+func (n *node[K]) equal(value K) bool {
 	return n.value == value
 }
 
 // NewInt64 return an empty int64 skip set in ascending order.
-func NewInt64() *Int64Set {
-	h := newInt64Node(0, maxLevel)
+func New[K constraint.Number]() *Set[K] {
+	h := newNode[K](0, maxLevel)
 	h.flags.SetTrue(fullyLinked)
-	return &Int64Set{
+	return &Set[K]{
 		header:       h,
 		highestLevel: defaultHighestLevel,
 	}
@@ -85,7 +86,7 @@ func NewInt64() *Int64Set {
 
 // findNodeRemove takes a value and two maximal-height arrays then searches exactly as in a sequential skip-list.
 // The returned preds and succs always satisfy preds[i] > value >= succs[i].
-func (s *Int64Set) findNodeRemove(value int64, preds *[maxLevel]*int64Node, succs *[maxLevel]*int64Node) int {
+func (s *Set[K]) findNodeRemove(value K, preds *[maxLevel]*node[K], succs *[maxLevel]*node[K]) int {
 	// lFound represents the index of the first layer at which it found a node.
 	lFound, x := -1, s.header
 	for i := int(atomic.LoadInt64(&s.highestLevel)) - 1; i >= 0; i-- {
@@ -107,7 +108,7 @@ func (s *Int64Set) findNodeRemove(value int64, preds *[maxLevel]*int64Node, succ
 
 // findNodeAdd takes a value and two maximal-height arrays then searches exactly as in a sequential skip-set.
 // The returned preds and succs always satisfy preds[i] > value >= succs[i].
-func (s *Int64Set) findNodeAdd(value int64, preds *[maxLevel]*int64Node, succs *[maxLevel]*int64Node) int {
+func (s *Set[K]) findNodeAdd(value K, preds *[maxLevel]*node[K], succs *[maxLevel]*node[K]) int {
 	x := s.header
 	for i := int(atomic.LoadInt64(&s.highestLevel)) - 1; i >= 0; i-- {
 		succ := x.atomicLoadNext(i)
@@ -126,8 +127,8 @@ func (s *Int64Set) findNodeAdd(value int64, preds *[maxLevel]*int64Node, succs *
 	return -1
 }
 
-func unlockInt64(preds [maxLevel]*int64Node, highestLevel int) {
-	var prevPred *int64Node
+func unlock[K constraint.Number](preds [maxLevel]*node[K], highestLevel int) {
+	var prevPred *node[K]
 	for i := highestLevel; i >= 0; i-- {
 		if preds[i] != prevPred { // the node could be unlocked by previous loop
 			preds[i].mu.Unlock()
@@ -140,9 +141,9 @@ func unlockInt64(preds [maxLevel]*int64Node, highestLevel int) {
 // return false if this process can't insert this value, because another process has insert the same value.
 //
 // If the value is in the skip set but not fully linked, this process will wait until it is.
-func (s *Int64Set) Add(value int64) bool {
+func (s *Set[K]) Add(value K) bool {
 	level := s.randomlevel()
-	var preds, succs [maxLevel]*int64Node
+	var preds, succs [maxLevel]*node[K]
 	for {
 		lFound := s.findNodeAdd(value, &preds, &succs)
 		if lFound != -1 { // indicating the value is already in the skip-list
@@ -161,7 +162,7 @@ func (s *Int64Set) Add(value int64) bool {
 		var (
 			highestLocked        = -1 // the highest level being locked by this process
 			valid                = true
-			pred, succ, prevPred *int64Node
+			pred, succ, prevPred *node[K]
 		)
 		for layer := 0; valid && layer < level; layer++ {
 			pred = preds[layer]   // target node's previous node
@@ -178,23 +179,23 @@ func (s *Int64Set) Add(value int64) bool {
 			valid = !pred.flags.Get(marked) && (succ == nil || !succ.flags.Get(marked)) && pred.loadNext(layer) == succ
 		}
 		if !valid {
-			unlockInt64(preds, highestLocked)
+			unlock[K](preds, highestLocked)
 			continue
 		}
 
-		nn := newInt64Node(value, level)
+		nn := newNode[K](value, level)
 		for layer := 0; layer < level; layer++ {
 			nn.storeNext(layer, succs[layer])
 			preds[layer].atomicStoreNext(layer, nn)
 		}
 		nn.flags.SetTrue(fullyLinked)
-		unlockInt64(preds, highestLocked)
+		unlock[K](preds, highestLocked)
 		atomic.AddInt64(&s.length, 1)
 		return true
 	}
 }
 
-func (s *Int64Set) randomlevel() int {
+func (s *Set[K]) randomlevel() int {
 	// Generate random level.
 	level := randomLevel()
 	// Update highest level if possible.
@@ -211,7 +212,7 @@ func (s *Int64Set) randomlevel() int {
 }
 
 // Contains check if the value is in the skip set.
-func (s *Int64Set) Contains(value int64) bool {
+func (s *Set[K]) Contains(value K) bool {
 	x := s.header
 	for i := int(atomic.LoadInt64(&s.highestLevel)) - 1; i >= 0; i-- {
 		nex := x.atomicLoadNext(i)
@@ -229,12 +230,12 @@ func (s *Int64Set) Contains(value int64) bool {
 }
 
 // Remove a node from the skip set.
-func (s *Int64Set) Remove(value int64) bool {
+func (s *Set[K]) Remove(value K) bool {
 	var (
-		nodeToRemove *int64Node
+		nodeToRemove *node[K]
 		isMarked     bool // represents if this operation mark the node
 		topLayer     = -1
-		preds, succs [maxLevel]*int64Node
+		preds, succs [maxLevel]*node[K]
 	)
 	for {
 		lFound := s.findNodeRemove(value, &preds, &succs)
@@ -257,7 +258,7 @@ func (s *Int64Set) Remove(value int64) bool {
 			var (
 				highestLocked        = -1 // the highest level being locked by this process
 				valid                = true
-				pred, succ, prevPred *int64Node
+				pred, succ, prevPred *node[K]
 			)
 			for layer := 0; valid && (layer <= topLayer); layer++ {
 				pred, succ = preds[layer], succs[layer]
@@ -274,7 +275,7 @@ func (s *Int64Set) Remove(value int64) bool {
 				valid = !pred.flags.Get(marked) && pred.loadNext(layer) == succ
 			}
 			if !valid {
-				unlockInt64(preds, highestLocked)
+				unlock[K](preds, highestLocked)
 				continue
 			}
 			for i := topLayer; i >= 0; i-- {
@@ -283,7 +284,7 @@ func (s *Int64Set) Remove(value int64) bool {
 				preds[i].atomicStoreNext(i, nodeToRemove.loadNext(i))
 			}
 			nodeToRemove.mu.Unlock()
-			unlockInt64(preds, highestLocked)
+			unlock[K](preds, highestLocked)
 			atomic.AddInt64(&s.length, -1)
 			return true
 		}
@@ -293,7 +294,7 @@ func (s *Int64Set) Remove(value int64) bool {
 
 // Range calls f sequentially for each value present in the skip set.
 // If f returns false, range stops the iteration.
-func (s *Int64Set) Range(f func(value int64) bool) {
+func (s *Set[K]) Range(f func(value K) bool) {
 	x := s.header.atomicLoadNext(0)
 	for x != nil {
 		if !x.flags.MGet(fullyLinked|marked, fullyLinked) {
@@ -308,6 +309,6 @@ func (s *Int64Set) Range(f func(value int64) bool) {
 }
 
 // Len return the length of this skip set.
-func (s *Int64Set) Len() int {
+func (s *Set[K]) Len() int {
 	return int(atomic.LoadInt64(&s.length))
 }

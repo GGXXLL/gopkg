@@ -21,7 +21,7 @@ import (
 )
 
 var uint64SCQPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return newUint64SCQ()
 	},
 }

@@ -26,10 +26,10 @@ func TestGetOK(t *testing.T) {
 	var key, ret = "key", "ret"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return ret, nil
 		},
 	}
@@ -56,10 +56,10 @@ func TestGetErr(t *testing.T) {
 	var first = true
 	op := Options{
 		RefreshDuration: time.Second + 100*time.Millisecond,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			if first {
 				first = false
 				return nil, errors.New("error")
@@ -87,10 +87,10 @@ func TestGetOrSetOK(t *testing.T) {
 	var key, ret, def = "key", "ret", "def"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return ret, nil
 		},
 	}
@@ -114,10 +114,10 @@ func TestGetOrSetErr(t *testing.T) {
 	var first = true
 	op := Options{
 		RefreshDuration: time.Second + 500*time.Millisecond,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			if first {
 				first = false
 				return nil, errors.New("error")
@@ -143,10 +143,10 @@ func TestGetOrSetErr(t *testing.T) {
 func TestSetDefault(t *testing.T) {
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return nil, errors.New("error")
 		},
 	}
@@ -169,10 +169,10 @@ func TestSetDefault(t *testing.T) {
 func TestDeleteIf(t *testing.T) {
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return nil, errors.New("error")
 		},
 	}
@@ -194,10 +194,10 @@ func TestClose(t *testing.T) {
 	var cnt int
 	op := Options{
 		RefreshDuration: dur - 10*time.Millisecond,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			cnt++
 			return cnt, nil
 		},
@@ -231,10 +231,10 @@ func TestExpire(t *testing.T) {
 		EnableExpire:    true,
 		ExpireDuration:  3 * time.Minute,
 		RefreshDuration: time.Minute,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return true
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			trigger = true
 			return "", nil
 		},
@@ -275,10 +275,10 @@ func BenchmarkGet(b *testing.B) {
 	var key = "key"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return "", nil
 		},
 	}
@@ -295,10 +295,10 @@ func BenchmarkGetParallel(b *testing.B) {
 	var key = "key"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return "", nil
 		},
 	}
@@ -317,10 +317,10 @@ func BenchmarkGetOrSet(b *testing.B) {
 	var key, def = "key", "def"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return "", nil
 		},
 	}
@@ -337,10 +337,10 @@ func BenchmarkGetOrSetParallel(b *testing.B) {
 	var key, def = "key", "def"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return "", nil
 		},
 	}
@@ -359,10 +359,10 @@ func BenchmarkRefresh(b *testing.B) {
 	var key, def = "key", "def"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return "", nil
 		},
 	}
@@ -380,10 +380,10 @@ func BenchmarkRefreshParallel(b *testing.B) {
 	var key, def = "key", "def"
 	op := Options{
 		RefreshDuration: time.Second,
-		IsSame: func(key string, oldData, newData interface{}) bool {
+		IsSame: func(key string, oldData, newData any) bool {
 			return false
 		},
-		Fetcher: func(key string) (interface{}, error) {
+		Fetcher: func(key string) (any, error) {
 			return "", nil
 		},
 	}

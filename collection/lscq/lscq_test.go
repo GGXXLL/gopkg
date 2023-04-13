@@ -25,7 +25,7 @@ import (
 
 func TestBoundedQueue(t *testing.T) {
 	q := newUint64SCQ()
-	s := skipset.NewUint64()
+	s := skipset.New[uint64]()
 
 	// Dequeue empty queue.
 	val, ok := q.Dequeue()
@@ -60,7 +60,7 @@ func TestBoundedQueue(t *testing.T) {
 
 	// ---------- MULTIPLE TEST BEGIN ----------.
 	for j := 0; j < 10; j++ {
-		s = skipset.NewUint64()
+		s = skipset.New[uint64]()
 
 		// Dequeue empty queue.
 		val, ok = q.Dequeue()
@@ -97,8 +97,8 @@ func TestBoundedQueue(t *testing.T) {
 
 	// MPMC correctness.
 	var wg sync.WaitGroup
-	s1 := skipset.NewUint64()
-	s2 := skipset.NewUint64()
+	s1 := skipset.New[uint64]()
+	s2 := skipset.New[uint64]()
 	for i := 0; i < 100000; i++ {
 		wg.Add(1)
 		go func() {
@@ -142,8 +142,8 @@ func TestUnboundedQueue(t *testing.T) {
 	// MPMC correctness.
 	q := NewUint64()
 	var wg sync.WaitGroup
-	s1 := skipset.NewUint64()
-	s2 := skipset.NewUint64()
+	s1 := skipset.New[uint64]()
+	s2 := skipset.New[uint64]()
 	for i := 0; i < 100000; i++ {
 		wg.Add(1)
 		go func() {

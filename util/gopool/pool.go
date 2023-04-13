@@ -30,7 +30,7 @@ type Pool interface {
 	// CtxGo executes f and accepts the context.
 	CtxGo(ctx context.Context, f func())
 	// SetPanicHandler sets the panic handler.
-	SetPanicHandler(f func(context.Context, interface{}))
+	SetPanicHandler(f func(context.Context, any))
 	// WorkerCount returns the number of running workers
 	WorkerCount() int32
 }
@@ -59,7 +59,7 @@ func (t *task) Recycle() {
 	taskPool.Put(t)
 }
 
-func newTask() interface{} {
+func newTask() any {
 	return &task{}
 }
 
@@ -87,7 +87,7 @@ type pool struct {
 	workerCount int32
 
 	// This method will be called when the worker panic
-	panicHandler func(context.Context, interface{})
+	panicHandler func(context.Context, any)
 }
 
 // NewPool creates a new pool with the given name, cap and config.
@@ -139,7 +139,7 @@ func (p *pool) CtxGo(ctx context.Context, f func()) {
 }
 
 // SetPanicHandler the func here will be called after the panic has been recovered.
-func (p *pool) SetPanicHandler(f func(context.Context, interface{})) {
+func (p *pool) SetPanicHandler(f func(context.Context, any)) {
 	p.panicHandler = f
 }
 

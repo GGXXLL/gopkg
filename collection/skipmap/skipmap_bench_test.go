@@ -28,7 +28,7 @@ const randN = math.MaxUint32
 
 func BenchmarkStore(b *testing.B) {
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
@@ -49,7 +49,7 @@ func BenchmarkStore(b *testing.B) {
 
 func BenchmarkLoad100Hits(b *testing.B) {
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize; i++ {
 			l.Store(int64(i), nil)
 		}
@@ -77,7 +77,7 @@ func BenchmarkLoad100Hits(b *testing.B) {
 func BenchmarkLoad50Hits(b *testing.B) {
 	const rate = 2
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize*rate; i++ {
 			if fastrand.Uint32n(rate) == 0 {
 				l.Store(int64(i), nil)
@@ -108,7 +108,7 @@ func BenchmarkLoad50Hits(b *testing.B) {
 
 func BenchmarkLoadNoHits(b *testing.B) {
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		invalid := make([]int64, 0, initsize)
 		for i := 0; i < initsize*2; i++ {
 			if i%2 == 0 {
@@ -145,7 +145,7 @@ func BenchmarkLoadNoHits(b *testing.B) {
 
 func Benchmark50Store50Load(b *testing.B) {
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
@@ -176,7 +176,7 @@ func Benchmark50Store50Load(b *testing.B) {
 
 func Benchmark30Store70Load(b *testing.B) {
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
@@ -207,7 +207,7 @@ func Benchmark30Store70Load(b *testing.B) {
 
 func Benchmark1Delete9Store90Load(b *testing.B) {
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize; i++ {
 			l.Store(int64(i), nil)
 		}
@@ -248,7 +248,7 @@ func Benchmark1Delete9Store90Load(b *testing.B) {
 
 func Benchmark1Range9Delete90Store900Load(b *testing.B) {
 	b.Run("skipmap", func(b *testing.B) {
-		l := NewInt64()
+		l := New[int64]()
 		for i := 0; i < initsize; i++ {
 			l.Store(int64(i), nil)
 		}
@@ -257,7 +257,7 @@ func Benchmark1Range9Delete90Store900Load(b *testing.B) {
 			for pb.Next() {
 				u := fastrand.Uint32n(1000)
 				if u == 0 {
-					l.Range(func(key int64, value interface{}) bool {
+					l.Range(func(key int64, value any) bool {
 						return true
 					})
 				} else if u > 10 && u < 20 {
@@ -280,7 +280,7 @@ func Benchmark1Range9Delete90Store900Load(b *testing.B) {
 			for pb.Next() {
 				u := fastrand.Uint32n(1000)
 				if u == 0 {
-					l.Range(func(key, value interface{}) bool {
+					l.Range(func(key, value any) bool {
 						return true
 					})
 				} else if u > 10 && u < 20 {
@@ -431,7 +431,7 @@ func BenchmarkString1Range9Delete90Store900Load(b *testing.B) {
 			for pb.Next() {
 				u := fastrand.Uint32n(1000)
 				if u == 0 {
-					l.Range(func(key string, value interface{}) bool {
+					l.Range(func(key string, value any) bool {
 						return true
 					})
 				} else if u > 10 && u < 20 {
@@ -454,7 +454,7 @@ func BenchmarkString1Range9Delete90Store900Load(b *testing.B) {
 			for pb.Next() {
 				u := fastrand.Uint32n(1000)
 				if u == 0 {
-					l.Range(func(key, value interface{}) bool {
+					l.Range(func(key, value any) bool {
 						return true
 					})
 				} else if u > 10 && u < 20 {

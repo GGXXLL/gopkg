@@ -7,7 +7,7 @@ import (
 )
 
 func BenchmarkLoadOrStoreExist(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	m.Store(1, 1)
 	b.ResetTimer()
 	b.RunParallel(func(p *testing.PB) {
@@ -18,18 +18,18 @@ func BenchmarkLoadOrStoreExist(b *testing.B) {
 }
 
 func BenchmarkLoadOrStoreLazyExist(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	m.Store(1, 1)
 	b.ResetTimer()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			m.LoadOrStoreLazy(1, func() interface{} { return 1 })
+			m.LoadOrStoreLazy(1, func() any { return 1 })
 		}
 	})
 }
 
 func BenchmarkLoadOrStoreExistSingle(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	m.Store(1, 1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -38,16 +38,16 @@ func BenchmarkLoadOrStoreExistSingle(b *testing.B) {
 }
 
 func BenchmarkLoadOrStoreLazyExistSingle(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	m.Store(1, 1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		m.LoadOrStoreLazy(1, func() interface{} { return 1 })
+		m.LoadOrStoreLazy(1, func() any { return 1 })
 	}
 }
 
 func BenchmarkLoadOrStoreRandom(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	b.ResetTimer()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
@@ -57,17 +57,17 @@ func BenchmarkLoadOrStoreRandom(b *testing.B) {
 }
 
 func BenchmarkLoadOrStoreLazyRandom(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	b.ResetTimer()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			m.LoadOrStoreLazy(fastrand.Int(), func() interface{} { return 1 })
+			m.LoadOrStoreLazy(fastrand.Int(), func() any { return 1 })
 		}
 	})
 }
 
 func BenchmarkLoadOrStoreRandomSingle(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.LoadOrStore(fastrand.Int(), 1)
@@ -75,9 +75,9 @@ func BenchmarkLoadOrStoreRandomSingle(b *testing.B) {
 }
 
 func BenchmarkLoadOrStoreLazyRandomSingle(b *testing.B) {
-	m := NewInt()
+	m := New[int]()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		m.LoadOrStoreLazy(fastrand.Int(), func() interface{} { return 1 })
+		m.LoadOrStoreLazy(fastrand.Int(), func() any { return 1 })
 	}
 }

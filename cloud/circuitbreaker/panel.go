@@ -105,7 +105,7 @@ func (p *panel) RemoveBreaker(key string) {
 // DumpBreakers .
 func (p *panel) DumpBreakers() map[string]Breaker {
 	breakers := make(map[string]Breaker)
-	p.breakers.Range(func(key string, value interface{}) bool {
+	p.breakers.Range(func(key string, value any) bool {
 		breakers[key] = value.(*breaker)
 		return true
 	})
@@ -178,7 +178,7 @@ func (t *sharedTicker) tick(ticker *time.Ticker) {
 		case <-ticker.C:
 			t.Lock()
 			for p := range t.panels {
-				p.breakers.Range(func(_ string, value interface{}) bool {
+				p.breakers.Range(func(_ string, value any) bool {
 					if b, ok := value.(*breaker); ok {
 						b.metricer.tick()
 					}

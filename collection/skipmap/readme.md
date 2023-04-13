@@ -45,7 +45,7 @@ import (
 )
 
 func main() {
-	l := skipmap.NewInt()
+	l := skipmap.New[int]()
 
 	for _, v := range []int{10, 12, 15} {
 		l.Store(v, v+100)
@@ -56,7 +56,7 @@ func main() {
 		fmt.Println("skipmap load 10 with value ", v)
 	}
 
-	l.Range(func(key int, value interface{}) bool {
+	l.Range(func(key int, value any) bool {
 		fmt.Println("skipmap range found ", key, value)
 		return true
 	})

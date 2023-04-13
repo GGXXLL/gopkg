@@ -27,17 +27,17 @@ import (
 // Options controls the behavior of AsyncCache.
 type Options struct {
 	RefreshDuration time.Duration
-	Fetcher         func(key string) (interface{}, error)
+	Fetcher         func(key string) (any, error)
 
 	// If EnableExpire is true, ExpireDuration MUST be set.
 	EnableExpire   bool
 	ExpireDuration time.Duration
 
 	ErrorHandler  func(key string, err error)
-	ChangeHandler func(key string, oldData, newData interface{})
-	DeleteHandler func(key string, oldData interface{})
+	ChangeHandler func(key string, oldData, newData any)
+	DeleteHandler func(key string, oldData any)
 
-	IsSame     func(key string, oldData, newData interface{}) bool
+	IsSame     func(key string, oldData, newData any) bool
 	ErrLogFunc func(str string)
 }
 
@@ -46,20 +46,20 @@ type AsyncCache interface {
 	// SetDefault sets the default value of given key if it is new to the cache.
 	// It is useful for cache warming up.
 	// Param val should not be nil.
-	SetDefault(key string, val interface{}) (exist bool)
+	SetDefault(key string, val any) (exist bool)
 
 	// Get tries to fetch a value corresponding to the given key from the cache.
 	// If error occurs during the first time fetching, it will be cached until the
 	// sequential fetching triggered by the refresh goroutine succeed.
-	Get(key string) (val interface{}, err error)
+	Get(key string) (val any, err error)
 
 	// GetOrSet tries to fetch a value corresponding to the given key from the cache.
 	// If the key is not yet cached or error occurs, the default value will be set.
-	GetOrSet(key string, defaultVal interface{}) (val interface{})
+	GetOrSet(key string, defaultVal any) (val any)
 
 	// Dump dumps all cache entries.
 	// This will not cause expire to refresh.
-	Dump() map[string]interface{}
+	Dump() map[string]any
 
 	// DeleteIf deletes cached entries that match the `shouldDelete` predicate.
 	DeleteIf(shouldDelete func(key string) bool)
@@ -102,7 +102,7 @@ type entry struct {
 	err    Error
 }
 
-func (e *entry) Store(x interface{}, err error) {
+func (e *entry) Store(x any, err error) {
 	if x != nil {
 		e.val.Store(x)
 	} else {
@@ -158,7 +158,7 @@ func NewAsyncCache(opt Options) AsyncCache {
 }
 
 // SetDefault sets the default value of given key if it is new to the cache.
-func (c *asyncCache) SetDefault(key string, val interface{}) bool {
+func (c *asyncCache) SetDefault(key string, val any) bool {
 	ety := &entry{}
 	ety.Store(val, nil)
 	actual, exist := c.data.LoadOrStore(key, ety)
@@ -171,7 +171,7 @@ func (c *asyncCache) SetDefault(key string, val interface{}) bool {
 // Get tries to fetch a value corresponding to the given key from the cache.
 // If error occurs during in the first time fetching, it will be cached until the
 // sequential fetchings triggered by the refresh goroutine succeed.
-func (c *asyncCache) Get(key string) (val interface{}, err error) {
+func (c *asyncCache) Get(key string) (val any, err error) {
 	var ok bool
 	val, ok = c.data.Load(key)
 	if ok {
@@ -180,7 +180,7 @@ func (c *asyncCache) Get(key string) (val interface{}, err error) {
 		return e.val.Load(), e.err.Load()
 	}
 
-	val, err, _ = c.sfg.Do(key, func() (v interface{}, e error) {
+	val, err, _ = c.sfg.Do(key, func() (v any, e error) {
 		v, e = c.opt.Fetcher(key)
 		ety := &entry{}
 		ety.Store(v, e)
@@ -192,7 +192,7 @@ func (c *asyncCache) Get(key string) (val interface{}, err error) {
 
 // GetOrSet tries to fetch a value corresponding to the given key from the cache.
 // If the key is not yet cached or fetching failed, the default value will be set.
-func (c *asyncCache) GetOrSet(key string, def interface{}) (val interface{}) {
+func (c *asyncCache) GetOrSet(key string, def any) (val any) {
 	if v, ok := c.data.Load(key); ok {
 		e := v.(*entry)
 		if e.err.Load() != nil {
@@ -205,7 +205,7 @@ func (c *asyncCache) GetOrSet(key string, def interface{}) (val interface{}) {
 		return e.val.Load()
 	}
 
-	val, _, _ = c.sfg.Do(key, func() (interface{}, error) {
+	val, _, _ = c.sfg.Do(key, func() (any, error) {
 		v, e := c.opt.Fetcher(key)
 		if e != nil {
 			v = def
@@ -219,9 +219,9 @@ func (c *asyncCache) GetOrSet(key string, def interface{}) (val interface{}) {
 }
 
 // Dump dumps all cached entries.
-func (c *asyncCache) Dump() map[string]interface{} {
-	data := make(map[string]interface{})
-	c.data.Range(func(key, val interface{}) bool {
+func (c *asyncCache) Dump() map[string]any {
+	data := make(map[string]any)
+	c.data.Range(func(key, val any) bool {
 		k, ok := key.(string)
 		if !ok {
 			c.opt.ErrLogFunc(fmt.Sprintf("invalid key: %v, type: %T is not string", k, k))
@@ -236,7 +236,7 @@ func (c *asyncCache) Dump() map[string]interface{} {
 
 // DeleteIf deletes cached entries that match the `shouldDelete` predicate.
 func (c *asyncCache) DeleteIf(shouldDelete func(key string) bool) {
-	c.data.Range(func(key, value interface{}) bool {
+	c.data.Range(func(key, value any) bool {
 		s := key.(string)
 		if shouldDelete(s) {
 			if c.opt.DeleteHandler != nil {
@@ -306,7 +306,7 @@ func (t *sharedTicker) tick(ticker *time.Ticker, tt tickerType) {
 }
 
 func (c *asyncCache) expire() {
-	c.data.Range(func(key, value interface{}) bool {
+	c.data.Range(func(key, value any) bool {
 		k, ok := key.(string)
 		if !ok {
 			c.opt.ErrLogFunc(fmt.Sprintf("invalid key: %v, type: %T is not string", k, k))
@@ -331,7 +331,7 @@ func (c *asyncCache) expire() {
 }
 
 func (c *asyncCache) refresh() {
-	c.data.Range(func(key, value interface{}) bool {
+	c.data.Range(func(key, value any) bool {
 		k, ok := key.(string)
 		if !ok {
 			c.opt.ErrLogFunc(fmt.Sprintf("invalid key: %v, type: %T is not string", k, k))

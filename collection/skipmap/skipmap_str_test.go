@@ -75,7 +75,7 @@ func TestStringMap(t *testing.T) {
 		t.Fatal("invalid")
 	}
 
-	m.Range(func(key string, value interface{}) bool {
+	m.Range(func(key string, value any) bool {
 		if key == "123" {
 			m.Store("123", 123)
 		} else if key == "456" {
@@ -102,13 +102,13 @@ func TestStringMap(t *testing.T) {
 	}
 	wg.Wait()
 	var count2 int64
-	m.Range(func(key string, value interface{}) bool {
+	m.Range(func(key string, value any) bool {
 		atomic.AddInt64(&count2, 1)
 		return true
 	})
 	m.Delete("600")
 	var count int64
-	m.Range(func(key string, value interface{}) bool {
+	m.Range(func(key string, value any) bool {
 		atomic.AddInt64(&count, 1)
 		return true
 	})

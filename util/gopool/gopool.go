@@ -30,7 +30,7 @@ func init() {
 }
 
 // Go is an alternative to the go keyword, which is able to recover panic.
-// gopool.Go(func(arg interface{}){
+// gopool.Go(func(arg any){
 //     ...
 // }(nil))
 func Go(f func()) {
@@ -48,7 +48,7 @@ func SetCap(cap int32) {
 }
 
 // SetPanicHandler sets the panic handler for the global pool.
-func SetPanicHandler(f func(context.Context, interface{})) {
+func SetPanicHandler(f func(context.Context, any)) {
 	defaultPool.SetPanicHandler(f)
 }
 

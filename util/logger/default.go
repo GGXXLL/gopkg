@@ -42,7 +42,7 @@ type localLogger struct {
 	logger *log.Logger
 }
 
-func (ll *localLogger) logf(lv Level, format *string, v ...interface{}) {
+func (ll *localLogger) logf(lv Level, format *string, v ...any) {
 	if level > lv {
 		return
 	}
@@ -58,86 +58,86 @@ func (ll *localLogger) logf(lv Level, format *string, v ...interface{}) {
 	}
 }
 
-func (ll *localLogger) Fatal(v ...interface{}) {
+func (ll *localLogger) Fatal(v ...any) {
 	ll.logf(LevelFatal, nil, v...)
 }
 
-func (ll *localLogger) Error(v ...interface{}) {
+func (ll *localLogger) Error(v ...any) {
 	ll.logf(LevelError, nil, v...)
 }
 
-func (ll *localLogger) Warn(v ...interface{}) {
+func (ll *localLogger) Warn(v ...any) {
 	ll.logf(LevelWarn, nil, v...)
 }
 
-func (ll *localLogger) Notice(v ...interface{}) {
+func (ll *localLogger) Notice(v ...any) {
 	ll.logf(LevelNotice, nil, v...)
 }
 
-func (ll *localLogger) Info(v ...interface{}) {
+func (ll *localLogger) Info(v ...any) {
 	ll.logf(LevelInfo, nil, v...)
 }
 
-func (ll *localLogger) Debug(v ...interface{}) {
+func (ll *localLogger) Debug(v ...any) {
 	ll.logf(LevelDebug, nil, v...)
 }
 
-func (ll *localLogger) Trace(v ...interface{}) {
+func (ll *localLogger) Trace(v ...any) {
 	ll.logf(LevelTrace, nil, v...)
 }
 
-func (ll *localLogger) Fatalf(format string, v ...interface{}) {
+func (ll *localLogger) Fatalf(format string, v ...any) {
 	ll.logf(LevelFatal, &format, v...)
 }
 
-func (ll *localLogger) Errorf(format string, v ...interface{}) {
+func (ll *localLogger) Errorf(format string, v ...any) {
 	ll.logf(LevelError, &format, v...)
 }
 
-func (ll *localLogger) Warnf(format string, v ...interface{}) {
+func (ll *localLogger) Warnf(format string, v ...any) {
 	ll.logf(LevelWarn, &format, v...)
 }
 
-func (ll *localLogger) Noticef(format string, v ...interface{}) {
+func (ll *localLogger) Noticef(format string, v ...any) {
 	ll.logf(LevelNotice, &format, v...)
 }
 
-func (ll *localLogger) Infof(format string, v ...interface{}) {
+func (ll *localLogger) Infof(format string, v ...any) {
 	ll.logf(LevelInfo, &format, v...)
 }
 
-func (ll *localLogger) Debugf(format string, v ...interface{}) {
+func (ll *localLogger) Debugf(format string, v ...any) {
 	ll.logf(LevelDebug, &format, v...)
 }
 
-func (ll *localLogger) Tracef(format string, v ...interface{}) {
+func (ll *localLogger) Tracef(format string, v ...any) {
 	ll.logf(LevelTrace, &format, v...)
 }
 
-func (ll *localLogger) CtxFatalf(ctx context.Context, format string, v ...interface{}) {
+func (ll *localLogger) CtxFatalf(ctx context.Context, format string, v ...any) {
 	ll.logf(LevelFatal, &format, v...)
 }
 
-func (ll *localLogger) CtxErrorf(ctx context.Context, format string, v ...interface{}) {
+func (ll *localLogger) CtxErrorf(ctx context.Context, format string, v ...any) {
 	ll.logf(LevelError, &format, v...)
 }
 
-func (ll *localLogger) CtxWarnf(ctx context.Context, format string, v ...interface{}) {
+func (ll *localLogger) CtxWarnf(ctx context.Context, format string, v ...any) {
 	ll.logf(LevelWarn, &format, v...)
 }
 
-func (ll *localLogger) CtxNoticef(ctx context.Context, format string, v ...interface{}) {
+func (ll *localLogger) CtxNoticef(ctx context.Context, format string, v ...any) {
 	ll.logf(LevelNotice, &format, v...)
 }
 
-func (ll *localLogger) CtxInfof(ctx context.Context, format string, v ...interface{}) {
+func (ll *localLogger) CtxInfof(ctx context.Context, format string, v ...any) {
 	ll.logf(LevelInfo, &format, v...)
 }
 
-func (ll *localLogger) CtxDebugf(ctx context.Context, format string, v ...interface{}) {
+func (ll *localLogger) CtxDebugf(ctx context.Context, format string, v ...any) {
 	ll.logf(LevelDebug, &format, v...)
 }
 
-func (ll *localLogger) CtxTracef(ctx context.Context, format string, v ...interface{}) {
+func (ll *localLogger) CtxTracef(ctx context.Context, format string, v ...any) {
 	ll.logf(LevelTrace, &format, v...)
 }
