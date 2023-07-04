@@ -39,7 +39,7 @@ func BenchmarkContainsNoHits(b *testing.B) {
 
 func benchmarkContainsNHits(b *testing.B, n int) {
 	b.Run("sortedset", func(b *testing.B) {
-		z := NewFloat64()
+		z := New[float64]()
 		var vals []string
 		for i := 0; i < initsize; i++ {
 			val := strconv.Itoa(i)
@@ -81,7 +81,7 @@ func benchmarkNAddNIncrNRemoveNContains(b *testing.B, nAdd, nIncr, nRemove, nCon
 	// var anAdd, anIncr, anRemove, anContains int
 
 	b.Run("sortedset", func(b *testing.B) {
-		z := NewFloat64()
+		z := New[float64]()
 		var vals []string
 		var scores []float64
 		var ops []int

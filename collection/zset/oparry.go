@@ -29,7 +29,7 @@ type listLevel struct {
 }
 type optionalArray struct {
 	base  [op1]listLevel
-	extra *([op2]listLevel)
+	extra *[op2]listLevel
 }
 
 func (a *optionalArray) init(level int) {

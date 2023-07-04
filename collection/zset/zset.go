@@ -23,37 +23,38 @@
 package zset
 
 import (
+	"github.com/bytedance/gopkg/internal/constraint"
 	"sync"
 )
 
-// Float64Node represents an element of Float64Set.
-type Float64Node struct {
+// Node represents an element of Set.
+type Node[K constraint.Number] struct {
 	Value string
-	Score float64
+	Score K
 }
 
-// Float64Set is a sorted set implementation with string value and float64 score.
-type Float64Set struct {
+// Set is a sorted set implementation with string value and K score.
+type Set[K constraint.Number] struct {
 	mu   sync.RWMutex
-	dict map[string]float64
-	list *float64List
+	dict map[string]K
+	list *list[K]
 }
 
-// NewFloat64 returns an empty string sorted set with int score.
+// New returns an empty string sorted set with int score.
 // strings are sorted in ascending order.
-func NewFloat64() *Float64Set {
-	return &Float64Set{
-		dict: make(map[string]float64),
-		list: newFloat64List(),
+func New[K constraint.Number]() *Set[K] {
+	return &Set[K]{
+		dict: make(map[string]K),
+		list: newList[K](),
 	}
 }
 
-// UnionFloat64 returns the union of given sorted sets, the resulting score of
+// Union returns the union of given sorted sets, the resulting score of
 // a value is the sum of its scores in the sorted sets where it exists.
 //
-// UnionFloat64 is the replacement of UNIONSTORE command of redis.
-func UnionFloat64(zs ...*Float64Set) *Float64Set {
-	dest := NewFloat64()
+// Union is the replacement of UNIONSTORE command of redis.
+func Union[K constraint.Number](zs ...*Set[K]) *Set[K] {
+	dest := New[K]()
 	for _, z := range zs {
 		for _, n := range z.Range(0, -1) {
 			dest.Add(n.Score, n.Value)
@@ -62,12 +63,12 @@ func UnionFloat64(zs ...*Float64Set) *Float64Set {
 	return dest
 }
 
-// InterFloat64 returns the intersection of given sorted sets, the resulting
+// Inter returns the intersection of given sorted sets, the resulting
 // score of a value is the sum of its scores in the sorted sets where it exists.
 //
-// InterFloat64 is the replacement of INTERSTORE command of redis.
-func InterFloat64(zs ...*Float64Set) *Float64Set {
-	dest := NewFloat64()
+// Inter is the replacement of INTERSTORE command of redis.
+func Inter[K constraint.Number](zs ...*Set[K]) *Set[K] {
+	dest := New[K]()
 	if len(zs) == 0 {
 		return dest
 	}
@@ -86,10 +87,10 @@ func InterFloat64(zs ...*Float64Set) *Float64Set {
 	return dest
 }
 
-// Len returns the length of Float64Set.
+// Len returns the length of Set.
 //
 // Len is the replacement of ZCARD command of redis.
-func (z *Float64Set) Len() int {
+func (z *Set[K]) Len() int {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -100,7 +101,7 @@ func (z *Float64Set) Len() int {
 // Returns true if the value is newly created.
 //
 // Add is the replacement of ZADD command of redis.
-func (z *Float64Set) Add(score float64, value string) bool {
+func (z *Set[K]) Add(score K, value string) bool {
 	z.mu.Lock()
 	defer z.mu.Unlock()
 
@@ -125,7 +126,7 @@ func (z *Float64Set) Add(score float64, value string) bool {
 // otherwise returns (0.0, false).
 //
 // Remove is the replacement of ZREM command of redis.
-func (z *Float64Set) Remove(value string) (float64, bool) {
+func (z *Set[K]) Remove(value string) (K, bool) {
 	z.mu.Lock()
 	defer z.mu.Unlock()
 
@@ -143,7 +144,7 @@ func (z *Float64Set) Remove(value string) (float64, bool) {
 // (as if its previous score was zero).
 //
 // IncrBy is the replacement of ZINCRBY command of redis.
-func (z *Float64Set) IncrBy(incr float64, value string) (float64, bool) {
+func (z *Set[K]) IncrBy(incr K, value string) (K, bool) {
 	z.mu.Lock()
 	defer z.mu.Unlock()
 
@@ -163,7 +164,7 @@ func (z *Float64Set) IncrBy(incr float64, value string) (float64, bool) {
 }
 
 // Contains returns whether the value exists in sorted set.
-func (z *Float64Set) Contains(value string) bool {
+func (z *Set[K]) Contains(value string) bool {
 	_, ok := z.Score(value)
 	return ok
 }
@@ -171,7 +172,7 @@ func (z *Float64Set) Contains(value string) bool {
 // Score returns the score of the value in the sorted set.
 //
 // Score is the replacement of ZSCORE command of redis.
-func (z *Float64Set) Score(value string) (float64, bool) {
+func (z *Set[K]) Score(value string) (K, bool) {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -186,7 +187,7 @@ func (z *Float64Set) Score(value string) (float64, bool) {
 // -1 is returned when value is not found.
 //
 // Rank is the replacement of ZRANK command of redis.
-func (z *Float64Set) Rank(value string) int {
+func (z *Set[K]) Rank(value string) int {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -205,7 +206,7 @@ func (z *Float64Set) Rank(value string) int {
 // -1 is returned when value is not found.
 //
 // RevRank is the replacement of ZREVRANK command of redis.
-func (z *Float64Set) RevRank(value string) int {
+func (z *Set[K]) RevRank(value string) int {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -221,11 +222,11 @@ func (z *Float64Set) RevRank(value string) int {
 // between min and max (including elements with score equal to min or max).
 //
 // Count is the replacement of ZCOUNT command of redis.
-func (z *Float64Set) Count(min, max float64) int {
+func (z *Set[K]) Count(min, max K) int {
 	return z.CountWithOpt(min, max, RangeOpt{})
 }
 
-func (z *Float64Set) CountWithOpt(min, max float64, opt RangeOpt) int {
+func (z *Set[K]) CountWithOpt(min, max K, opt RangeOpt) int {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -259,7 +260,7 @@ func (z *Float64Set) CountWithOpt(min, max float64, opt RangeOpt) int {
 // the gap of calls.
 //
 // Range is the replacement of ZRANGE command of redis.
-func (z *Float64Set) Range(start, stop int) []Float64Node {
+func (z *Set[K]) Range(start, stop int) []Node[K] {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -271,11 +272,11 @@ func (z *Float64Set) Range(start, stop int) []Float64Node {
 		stop = z.list.length + stop
 	}
 
-	var res []Float64Node
+	var res []Node[K]
 	x := z.list.GetNodeByRank(start + 1) // 0-based rank -> 1-based rank
 	for x != nil && start <= stop {
 		start++
-		res = append(res, Float64Node{
+		res = append(res, Node[K]{
 			Score: x.score,
 			Value: x.value,
 		})
@@ -289,18 +290,18 @@ func (z *Float64Set) Range(start, stop int) []Float64Node {
 // The elements are considered to be ordered from low to high scores.
 //
 // RangeByScore is the replacement of ZRANGEBYSCORE command of redis.
-func (z *Float64Set) RangeByScore(min, max float64) []Float64Node {
+func (z *Set[K]) RangeByScore(min, max K) []Node[K] {
 	return z.RangeByScoreWithOpt(min, max, RangeOpt{})
 }
 
-func (z *Float64Set) RangeByScoreWithOpt(min, max float64, opt RangeOpt) []Float64Node {
+func (z *Set[K]) RangeByScoreWithOpt(min, max K, opt RangeOpt) []Node[K] {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
-	var res []Float64Node
+	var res []Node[K]
 	x := z.list.FirstInRange(min, max, opt)
 	for x != nil && (x.score < max || (!opt.ExcludeMax && x.score == max)) {
-		res = append(res, Float64Node{
+		res = append(res, Node[K]{
 			Score: x.score,
 			Value: x.value,
 		})
@@ -324,7 +325,7 @@ func (z *Float64Set) RangeByScoreWithOpt(min, max float64, opt RangeOpt) []Float
 // the gap of calls.
 //
 // RevRange is the replacement of ZREVRANGE command of redis.
-func (z *Float64Set) RevRange(start, stop int) []Float64Node {
+func (z *Set[K]) RevRange(start, stop int) []Node[K] {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -336,11 +337,11 @@ func (z *Float64Set) RevRange(start, stop int) []Float64Node {
 		stop = z.list.length + stop
 	}
 
-	var res []Float64Node
+	var res []Node[K]
 	x := z.list.GetNodeByRank(z.list.length - start) // 0-based rank -> 1-based rank
 	for x != nil && start <= stop {
 		start++
-		res = append(res, Float64Node{
+		res = append(res, Node[K]{
 			Score: x.score,
 			Value: x.value,
 		})
@@ -354,18 +355,18 @@ func (z *Float64Set) RevRange(start, stop int) []Float64Node {
 // The elements are considered to be ordered from high to low scores.
 //
 // RevRangeByScore is the replacement of ZREVRANGEBYSCORE command of redis.
-func (z *Float64Set) RevRangeByScore(max, min float64) []Float64Node {
+func (z *Set[K]) RevRangeByScore(max, min K) []Node[K] {
 	return z.RevRangeByScoreWithOpt(max, min, RangeOpt{})
 }
 
-func (z *Float64Set) RevRangeByScoreWithOpt(max, min float64, opt RangeOpt) []Float64Node {
+func (z *Set[K]) RevRangeByScoreWithOpt(max, min K, opt RangeOpt) []Node[K] {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
-	var res []Float64Node
+	var res []Node[K]
 	x := z.list.LastInRange(min, max, opt)
 	for x != nil && (x.score > min || (!opt.ExcludeMin && x.score == min)) {
-		res = append(res, Float64Node{
+		res = append(res, Node[K]{
 			Score: x.score,
 			Value: x.value,
 		})
@@ -381,7 +382,7 @@ func (z *Float64Set) RevRangeByScoreWithOpt(max, min float64, opt RangeOpt) []Fl
 // and so on.
 //
 // RemoveRangeByRank is the replacement of ZREMRANGEBYRANK command of redis.
-func (z *Float64Set) RemoveRangeByRank(start, stop int) []Float64Node {
+func (z *Set[K]) RemoveRangeByRank(start, stop int) []Node[K] {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 
@@ -400,11 +401,11 @@ func (z *Float64Set) RemoveRangeByRank(start, stop int) []Float64Node {
 // between min and max (including elements with score equal to min or max).
 //
 // RemoveRangeByScore is the replacement of ZREMRANGEBYSCORE command of redis.
-func (z *Float64Set) RemoveRangeByScore(min, max float64) []Float64Node {
+func (z *Set[K]) RemoveRangeByScore(min, max K) []Node[K] {
 	return z.RevRangeByScoreWithOpt(min, max, RangeOpt{})
 }
 
-func (z *Float64Set) RemoveRangeByScoreWithOpt(min, max float64, opt RangeOpt) []Float64Node {
+func (z *Set[K]) RemoveRangeByScoreWithOpt(min, max K, opt RangeOpt) []Node[K] {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
 

@@ -11,10 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package zset
 
 import (
-	"math"
+	"github.com/bytedance/gopkg/internal/constraint"
 	"unsafe"
 
 	"github.com/bytedance/gopkg/lang/fastrand"
@@ -29,17 +30,18 @@ const (
 	probability = 0.25 // same to ZSKIPLIST_P, 1/4
 )
 
-// float64ListNode is node of float64List.
-type float64ListNode struct {
-	score float64 // key for sorting, which is allowed to be repeated
-	value string
-	prev  *float64ListNode // back pointer that only available at level 1
-	level int              // the length of optionalArray
-	oparr optionalArray
+// listNode is node of list.
+type listNode[K constraint.Number] struct {
+	score  K // key for sorting, which is allowed to be repeated
+	value  string
+	prev   *listNode[K] // back pointer that only available at level 1
+	level  int          // the length of optionalArray
+	oparr  optionalArray
+	ishead bool
 }
 
-func newFloat64ListNode(score float64, value string, level int) *float64ListNode {
-	node := &float64ListNode{
+func newListNode[K constraint.Number](score K, value string, level int) *listNode[K] {
+	node := &listNode[K]{
 		score: score,
 		value: value,
 		level: level,
@@ -48,32 +50,35 @@ func newFloat64ListNode(score float64, value string, level int) *float64ListNode
 	return node
 }
 
-func (n *float64ListNode) loadNext(i int) *float64ListNode {
-	return (*float64ListNode)(n.oparr.loadNext(i))
+func (n *listNode[K]) loadNext(i int) *listNode[K] {
+	return (*listNode[K])(n.oparr.loadNext(i))
 }
 
-func (n *float64ListNode) storeNext(i int, node *float64ListNode) {
+func (n *listNode[K]) storeNext(i int, node *listNode[K]) {
 	n.oparr.storeNext(i, unsafe.Pointer(node))
 }
 
-func (n *float64ListNode) loadSpan(i int) int {
+func (n *listNode[K]) loadSpan(i int) int {
 	return n.oparr.loadSpan(i)
 }
 
-func (n *float64ListNode) storeSpan(i int, span int) {
+func (n *listNode[K]) storeSpan(i int, span int) {
 	n.oparr.storeSpan(i, span)
 }
 
-func (n *float64ListNode) loadNextAndSpan(i int) (*float64ListNode, int) {
+func (n *listNode[K]) loadNextAndSpan(i int) (*listNode[K], int) {
 	return n.loadNext(i), n.loadSpan(i)
 }
 
-func (n *float64ListNode) storeNextAndSpan(i int, next *float64ListNode, span int) {
+func (n *listNode[K]) storeNextAndSpan(i int, next *listNode[K], span int) {
 	n.storeNext(i, next)
 	n.storeSpan(i, span)
 }
 
-func (n *float64ListNode) lessThan(score float64, value string) bool {
+func (n *listNode[K]) lessThan(score K, value string) bool {
+	if n.ishead {
+		return false
+	}
 	if n.score < score {
 		return true
 	} else if n.score == score {
@@ -82,7 +87,10 @@ func (n *float64ListNode) lessThan(score float64, value string) bool {
 	return false
 }
 
-func (n *float64ListNode) lessEqual(score float64, value string) bool {
+func (n *listNode[K]) lessEqual(score K, value string) bool {
+	if n.ishead {
+		return false
+	}
 	if n.score < score {
 		return true
 	} else if n.score == score {
@@ -91,11 +99,14 @@ func (n *float64ListNode) lessEqual(score float64, value string) bool {
 	return false
 }
 
-func (n *float64ListNode) equal(score float64, value string) bool {
+func (n *listNode[K]) equal(score K, value string) bool {
+	if n.ishead {
+		return false
+	}
 	return n.value == value && n.score == score
 }
 
-// float64List is a specialized skip list implementation for sorted set.
+// list is a specialized skip list implementation for sorted set.
 //
 // It is almost implement the original
 // algorithm described by William Pugh in " Lists: A Probabilistic
@@ -104,27 +115,31 @@ func (n *float64ListNode) equal(score float64, value string) bool {
 // b) the comparison is not just by key (our 'score') but by satellite data(?).
 // c) there is a back pointer, so it's a doubly linked list with the back
 // pointers being only at "level 1". This allows to traverse the list
-// from tail to head, useful for RevRange.
-type float64List struct {
-	header       *float64ListNode
-	tail         *float64ListNode
+// from tail to head, useful for Set.RevRange.
+type list[K constraint.Number] struct {
+	header       *listNode[K]
+	tail         *listNode[K]
 	length       int
 	highestLevel int // highest level for now
 }
 
-func newFloat64List() *float64List {
-	l := &float64List{
-		header:       newFloat64ListNode(-math.MaxFloat64, "__HEADER", maxLevel), // FIXME:
+func newList[K constraint.Number]() *list[K] {
+	l := &list[K]{
+		header: &listNode[K]{
+			level:  maxLevel,
+			ishead: true,
+		},
 		highestLevel: 1,
 	}
+	l.header.oparr.init(maxLevel)
 	return l
 }
 
 // Insert inserts a new node in the skiplist. Assumes the element does not already
 // exist (up to the caller to enforce that).
-func (l *float64List) Insert(score float64, value string) *float64ListNode {
+func (l *list[K]) Insert(score K, value string) *listNode[K] {
 	var (
-		update [maxLevel]*float64ListNode
+		update [maxLevel]*listNode[K]
 		rank   [maxLevel + 1]int // +1 for eliminating a boundary judgment
 	)
 
@@ -154,7 +169,7 @@ func (l *float64List) Insert(score float64, value string) *float64ListNode {
 		}
 		l.highestLevel = level
 	}
-	x = newFloat64ListNode(score, value, level)
+	x = newListNode[K](score, value, level)
 	for i := 0; i < level; i++ {
 		// update --> x --> update.next
 		x.storeNext(i, update[i].loadNext(i))
@@ -184,7 +199,7 @@ func (l *float64List) Insert(score float64, value string) *float64ListNode {
 }
 
 // randomLevel returns a level between [1, maxLevel] for insertion.
-func (l *float64List) randomLevel() int {
+func (l *list[K]) randomLevel() int {
 	level := 1
 	for fastrand.Uint32n(1/probability) == 0 {
 		level++
@@ -200,7 +215,7 @@ func (l *float64List) randomLevel() int {
 //
 // NOTE: the rank is 1-based due to the span of l->header to the
 // first element.
-func (l *float64List) Rank(score float64, value string) int {
+func (l *list[K]) Rank(score K, value string) int {
 	rank := 0
 	x := l.header
 	for i := l.highestLevel - 1; i >= 0; i-- {
@@ -222,7 +237,7 @@ func (l *float64List) Rank(score float64, value string) int {
 
 // deleteNode is a internal function for deleting node x in O(1) time by giving a
 // update position matrix.
-func (l *float64List) deleteNode(x *float64ListNode, update *[maxLevel]*float64ListNode) {
+func (l *list[K]) deleteNode(x *listNode[K], update *[maxLevel]*listNode[K]) {
 	for i := 0; i < l.highestLevel; i++ {
 		if update[i].loadNext(i) == x {
 			// Remove x, updaet[i].span = updaet[i].span + x.span - 1 (x removed).
@@ -249,8 +264,8 @@ func (l *float64List) deleteNode(x *float64ListNode, update *[maxLevel]*float64L
 
 // Delete deletes an element with matching score/element from the skiplist.
 // The deleted node is returned if the node was found, otherwise 0 is returned.
-func (l *float64List) Delete(score float64, value string) *float64ListNode {
-	var update [maxLevel]*float64ListNode
+func (l *list[K]) Delete(score K, value string) *listNode[K] {
+	var update [maxLevel]*listNode[K]
 
 	x := l.header
 	for i := l.highestLevel - 1; i >= 0; i-- {
@@ -281,8 +296,8 @@ func (l *float64List) Delete(score float64, value string) *float64ListNode {
 // element, which is more costly.
 //
 // The function returns the updated element skiplist node pointer.
-func (l *float64List) UpdateScore(oldScore float64, value string, newScore float64) *float64ListNode {
-	var update [maxLevel]*float64ListNode
+func (l *list[K]) UpdateScore(oldScore K, value string, newScore K) *listNode[K] {
+	var update [maxLevel]*listNode[K]
 
 	x := l.header
 	for i := l.highestLevel - 1; i >= 0; i-- {
@@ -315,7 +330,7 @@ func (l *float64List) UpdateScore(oldScore float64, value string, newScore float
 	return newNode
 }
 
-func greaterThanMin(value float64, min float64, ex bool) bool {
+func greaterThanMin[K constraint.Number](value K, min K, ex bool) bool {
 	if ex {
 		return value > min
 	} else {
@@ -323,7 +338,7 @@ func greaterThanMin(value float64, min float64, ex bool) bool {
 	}
 }
 
-func lessThanMax(value float64, max float64, ex bool) bool {
+func lessThanMax[K constraint.Number](value K, max K, ex bool) bool {
 	if ex {
 		return value < max
 	} else {
@@ -337,10 +352,10 @@ func lessThanMax(value float64, max float64, ex bool) bool {
 // When inclusive a score >= min && score <= max is deleted.
 //
 // This function returns count of deleted elements.
-func (l *float64List) DeleteRangeByScore(min, max float64, opt RangeOpt, dict map[string]float64) []Float64Node {
+func (l *list[K]) DeleteRangeByScore(min, max K, opt RangeOpt, dict map[string]K) []Node[K] {
 	var (
-		update  [maxLevel]*float64ListNode
-		removed []Float64Node
+		update  [maxLevel]*listNode[K]
+		removed []Node[K]
 	)
 
 	x := l.header
@@ -361,7 +376,7 @@ func (l *float64List) DeleteRangeByScore(min, max float64, opt RangeOpt, dict ma
 		next := x.loadNext(0)
 		l.deleteNode(x, &update)
 		delete(dict, x.value)
-		removed = append(removed, Float64Node{
+		removed = append(removed, Node[K]{
 			Value: x.value,
 			Score: x.score,
 		})
@@ -371,14 +386,14 @@ func (l *float64List) DeleteRangeByScore(min, max float64, opt RangeOpt, dict ma
 	return removed
 }
 
-// Delete all the elements with rank between start and end from the skiplist.
+// DeleteRangeByRank delete all the elements with rank between start and end from the skiplist.
 // Start and end are inclusive.
 //
 // NOTE: start and end need to be 1-based
-func (l *float64List) DeleteRangeByRank(start, end int, dict map[string]float64) []Float64Node {
+func (l *list[K]) DeleteRangeByRank(start, end int, dict map[string]K) []Node[K] {
 	var (
-		update    [maxLevel]*float64ListNode
-		removed   []Float64Node
+		update    [maxLevel]*listNode[K]
+		removed   []Node[K]
 		traversed int
 	)
 
@@ -400,7 +415,7 @@ func (l *float64List) DeleteRangeByRank(start, end int, dict map[string]float64)
 		next := x.loadNext(0)
 		l.deleteNode(x, &update)
 		delete(dict, x.value)
-		removed = append(removed, Float64Node{
+		removed = append(removed, Node[K]{
 			Value: x.value,
 			Score: x.score,
 		})
@@ -411,7 +426,7 @@ func (l *float64List) DeleteRangeByRank(start, end int, dict map[string]float64)
 }
 
 // GetNodeByRank finds an element by its rank. The rank argument needs to be 1-based.
-func (l *float64List) GetNodeByRank(rank int) *float64ListNode {
+func (l *list[K]) GetNodeByRank(rank int) *listNode[K] {
 	var traversed int
 
 	x := l.header
@@ -430,7 +445,7 @@ func (l *float64List) GetNodeByRank(rank int) *float64ListNode {
 }
 
 // FirstInRange finds the first node that is contained in the specified range.
-func (l *float64List) FirstInRange(min, max float64, opt RangeOpt) *float64ListNode {
+func (l *list[K]) FirstInRange(min, max K, opt RangeOpt) *listNode[K] {
 	if !l.IsInRange(min, max, opt) {
 		return nil
 	}
@@ -453,7 +468,7 @@ func (l *float64List) FirstInRange(min, max float64, opt RangeOpt) *float64ListN
 }
 
 // LastInRange finds the last node that is contained in the specified range.
-func (l *float64List) LastInRange(min, max float64, opt RangeOpt) *float64ListNode {
+func (l *list[K]) LastInRange(min, max K, opt RangeOpt) *listNode[K] {
 	if !l.IsInRange(min, max, opt) {
 		return nil
 	}
@@ -475,7 +490,7 @@ func (l *float64List) LastInRange(min, max float64, opt RangeOpt) *float64ListNo
 }
 
 // IsInRange returns whether there is a port of sorted set in given range.
-func (l *float64List) IsInRange(min, max float64, opt RangeOpt) bool {
+func (l *list[K]) IsInRange(min, max K, opt RangeOpt) bool {
 	// Test empty range.
 	if min > max || (min == max && (opt.ExcludeMin || opt.ExcludeMax)) {
 		return false

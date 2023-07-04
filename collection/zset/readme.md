@@ -89,7 +89,7 @@ import (
 )
 
 func main() {
-	z := zset.NewFloat64()
+	z := zset.New[float64]()
 
 	values := []string{"Alice", "Bob", "Zhang"}
 	scores := []float64{90, 89, 59.9}

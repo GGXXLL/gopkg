@@ -36,19 +36,19 @@ func randString(prefix string) string {
 }
 
 func TestFloat64Set(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	assert.Zero(t, z.Len())
 }
 
 func TestFloat64SetAdd(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	v := randString("")
 	assert.True(t, z.Add(1, v))
 	assert.False(t, z.Add(1, v))
 }
 
 func TestFloat64SetContains(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	v := randString("")
 	z.Add(1, v)
 	assert.True(t, z.Contains(v))
@@ -56,7 +56,7 @@ func TestFloat64SetContains(t *testing.T) {
 }
 
 func TestFloat64SetScore(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	v := randString("")
 	s := rand.Float64()
 	z.Add(s, v)
@@ -68,7 +68,7 @@ func TestFloat64SetScore(t *testing.T) {
 }
 
 func TestFloat64SetIncr(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	_, ok := z.Score("t")
 	assert.False(t, ok)
 
@@ -84,7 +84,7 @@ func TestFloat64SetIncr(t *testing.T) {
 }
 
 func TestFloat64SetRemove(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	// test first insert
 	ok := z.Add(1, "t")
 	assert.True(t, ok)
@@ -93,7 +93,7 @@ func TestFloat64SetRemove(t *testing.T) {
 }
 
 func TestFloat64SetRank(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	v := randString("")
 	z.Add(1, v)
 	// test rank of exist value
@@ -104,7 +104,7 @@ func TestFloat64SetRank(t *testing.T) {
 
 func TestFloat64SetRank_Many(t *testing.T) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	rand.Seed(time.Now().Unix())
 
 	var vs []string
@@ -133,7 +133,7 @@ func TestFloat64SetRank_Many(t *testing.T) {
 }
 
 func TestFloat64SetRank_UpdateScore(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	rand.Seed(time.Now().Unix())
 
 	var vs []string
@@ -174,7 +174,7 @@ func TestFloat64SetRank_UpdateScore(t *testing.T) {
 // Test whether the ramdom inserted values sorted
 func TestFloat64SetIsSorted(t *testing.T) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	rand.Seed(time.Now().Unix())
 
 	// Test whether the ramdom inserted values sorted
@@ -191,6 +191,7 @@ func TestFloat64SetIsSorted(t *testing.T) {
 			continue
 		}
 		z.Add(float64(i), fmt.Sprint(i))
+		z.Add(-float64(i), fmt.Sprint(i))
 	}
 
 	testIsSorted(t, z)
@@ -208,7 +209,7 @@ func TestFloat64SetIsSorted(t *testing.T) {
 	testInternalSpan(t, z)
 }
 
-func testIsSorted(t *testing.T, z *Float64Set) {
+func testIsSorted(t *testing.T, z *Set[float64]) {
 	var scores []float64
 	for _, n := range z.Range(0, z.Len()-1) {
 		scores = append(scores, n.Score)
@@ -216,7 +217,7 @@ func testIsSorted(t *testing.T, z *Float64Set) {
 	assert.True(t, sort.Float64sAreSorted(scores))
 }
 
-func testInternalSpan(t *testing.T, z *Float64Set) {
+func testInternalSpan(t *testing.T, z *Set[float64]) {
 	l := z.list
 	for i := l.highestLevel - 1; i >= 0; i-- {
 		x := l.header
@@ -255,7 +256,7 @@ func TestFloat64SetRevRange(t *testing.T) {
 
 func testFloat64SetRange(t *testing.T, rev bool) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	for i := 0; i < N; i++ {
 		z.Add(fastrand.Float64(), fmt.Sprint(i))
 	}
@@ -267,7 +268,7 @@ func testFloat64SetRange(t *testing.T, rev bool) {
 			return b, a
 		}
 	}(fastrand.Intn(N), fastrand.Intn(N))
-	var ns []Float64Node
+	var ns []Node[float64]
 	if rev {
 		ns = z.RevRange(start, stop)
 	} else {
@@ -285,7 +286,7 @@ func testFloat64SetRange(t *testing.T, rev bool) {
 
 func TestFloat64SetRange_Negative(t *testing.T) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	for i := 0; i < N; i++ {
 		z.Add(fastrand.Float64(), fmt.Sprint(i))
 	}
@@ -296,7 +297,7 @@ func TestFloat64SetRange_Negative(t *testing.T) {
 
 func TestFloat64SetRevRange_Negative(t *testing.T) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	for i := 0; i < N; i++ {
 		z.Add(fastrand.Float64(), fmt.Sprint(i))
 	}
@@ -310,7 +311,7 @@ func TestFloat64SetRangeByScore(t *testing.T) {
 }
 
 func TestFloat64SetRangeByScoreWithOpt(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	z.Add(1.0, "1")
 	z.Add(1.1, "2")
 	z.Add(2.0, "3")
@@ -345,7 +346,7 @@ func TestFloat64SetRangeByScoreWithOpt(t *testing.T) {
 }
 
 func TestFloat64SetRevRangeByScoreWithOpt(t *testing.T) {
-	z := NewFloat64()
+	z := New[float64]()
 	z.Add(1.0, "1")
 	z.Add(1.1, "2")
 	z.Add(2.0, "3")
@@ -385,7 +386,7 @@ func TestFloat64SetRevRangeByScore(t *testing.T) {
 
 func testFloat64SetRangeByScore(t *testing.T, rev bool) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	for i := 0; i < N; i++ {
 		z.Add(fastrand.Float64(), fmt.Sprint(i))
 	}
@@ -398,7 +399,7 @@ func testFloat64SetRangeByScore(t *testing.T, rev bool) {
 		}
 	}(fastrand.Float64(), fastrand.Float64())
 
-	var ns []Float64Node
+	var ns []Node[float64]
 	if rev {
 		ns = z.RevRangeByScore(max, min)
 	} else {
@@ -428,7 +429,7 @@ func TestFloat64SetCountWithOpt(t *testing.T) {
 
 func testFloat64SetCountWithOpt(t *testing.T, opt RangeOpt) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	for i := 0; i < N; i++ {
 		z.Add(fastrand.Float64(), fmt.Sprint(i))
 	}
@@ -469,7 +470,7 @@ func testFloat64SetCountWithOpt(t *testing.T, opt RangeOpt) {
 
 func TestFloat64SetRemoveRangeByRank(t *testing.T) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	for i := 0; i < N; i++ {
 		z.Add(fastrand.Float64(), fmt.Sprint(i))
 	}
@@ -502,7 +503,7 @@ func TestFloat64SetRemoveRangeByScoreWithOpt(t *testing.T) {
 
 func testFloat64SetRemoveRangeByScoreWithOpt(t *testing.T, opt RangeOpt) {
 	const N = 1000
-	z := NewFloat64()
+	z := New[float64]()
 	for i := 0; i < N; i++ {
 		z.Add(fastrand.Float64(), fmt.Sprint(i))
 	}
@@ -526,10 +527,10 @@ func testFloat64SetRemoveRangeByScoreWithOpt(t *testing.T, opt RangeOpt) {
 	assert.Equal(t, N, z.Len()+len(actualNs))
 }
 
-func TestUnionFloat64(t *testing.T) {
-	var zs []*Float64Set
+func TestUnion(t *testing.T) {
+	var zs []*Set[float64]
 	for i := 0; i < 10; i++ {
-		z := NewFloat64()
+		z := New[float64]()
 		for j := 0; j < 100; j++ {
 			if fastrand.Float64() > 0.8 {
 				z.Add(fastrand.Float64(), fmt.Sprint(i))
@@ -537,7 +538,7 @@ func TestUnionFloat64(t *testing.T) {
 		}
 		zs = append(zs, z)
 	}
-	z := UnionFloat64(zs...)
+	z := Union[float64](zs...)
 	for _, n := range z.Range(0, z.Len()-1) {
 		var expectScore float64
 		for i := 0; i < 10; i++ {
@@ -548,15 +549,15 @@ func TestUnionFloat64(t *testing.T) {
 	}
 }
 
-func TestUnionFloat64_Empty(t *testing.T) {
-	z := UnionFloat64()
+func TestUnion_Empty(t *testing.T) {
+	z := Union[float64]()
 	assert.Zero(t, z.Len())
 }
 
-func TestInterFloat64(t *testing.T) {
-	var zs []*Float64Set
+func TestInter(t *testing.T) {
+	var zs []*Set[float64]
 	for i := 0; i < 10; i++ {
-		z := NewFloat64()
+		z := New[float64]()
 		for j := 0; j < 10; j++ {
 			if fastrand.Float64() > 0.8 {
 				z.Add(fastrand.Float64(), fmt.Sprint(i))
@@ -564,7 +565,7 @@ func TestInterFloat64(t *testing.T) {
 		}
 		zs = append(zs, z)
 	}
-	z := InterFloat64(zs...)
+	z := Inter[float64](zs...)
 	for _, n := range z.Range(0, z.Len()-1) {
 		var expectScore float64
 		for i := 0; i < 10; i++ {
@@ -576,19 +577,19 @@ func TestInterFloat64(t *testing.T) {
 	}
 }
 
-func TestInterFloat64_Empty(t *testing.T) {
-	z := InterFloat64()
+func TestInter_Empty(t *testing.T) {
+	z := Inter[float64]()
 	assert.Zero(t, z.Len())
 }
 
-func TestInterFloat64_Simple(t *testing.T) {
-	z1 := NewFloat64()
+func TestInter_Simple(t *testing.T) {
+	z1 := New[float64]()
 	z1.Add(0, "1")
-	z2 := NewFloat64()
+	z2 := New[float64]()
 	z2.Add(0, "1")
-	z3 := NewFloat64()
+	z3 := New[float64]()
 	z3.Add(0, "2")
 
-	z := InterFloat64(z1, z2, z3)
+	z := Inter[float64](z1, z2, z3)
 	assert.Zero(t, z.Len())
 }
